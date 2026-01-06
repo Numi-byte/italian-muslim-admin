@@ -19,6 +19,8 @@ import PublicHomePage from "./pages/PublicHomePage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import MasjidsAdminPage from "./pages/MasjidsAdminPage";
 
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+
 // ⬇️ Jumu'ah page back
 import JumuahTimesPage from "./pages/JumuahTimesPage";
 
@@ -320,6 +322,8 @@ const App: React.FC = () => {
 
           {/* Login page */}
           <Route path="/login" element={<LoginRoute />} />
+
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Private admin console */}
           <Route
