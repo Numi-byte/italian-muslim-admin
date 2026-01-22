@@ -1,486 +1,445 @@
 // src/pages/RamadanPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "../lib/supabaseClient"; // ✅ match PrayerTimesPage
 
+// ✅ Same as PrayerTimesPage dropdown source
 type Masjid = {
   id: string;
   official_name: string;
   city: string;
 };
 
-type RamadanSettings = {
+type SettingsRow = {
+  masjid_id: string;
+  enabled: boolean;
+  start_date: string; // YYYY-MM-DD (date)
+  end_date: string; // YYYY-MM-DD (date)
+  taraweeh_start_time: string | null; // HH:MM:SS (time)
+  taraweeh_rakaah: number | null;
+};
+
+type DayRow = {
   id: number;
   masjid_id: string;
-  gregorian_year: number;
-  hijri_year: number | null;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  booking_start: string | null;
-  booking_end: string | null;
+  date: string; // YYYY-MM-DD (date)
+  suhoor_end_time: string | null; // HH:MM:SS (time)
+  iftar_time: string | null; // HH:MM:SS (time)
 };
 
-type RamadanDay = {
-  id: number;
-  ramadan_id: number;
-  masjid_id: string;
-  day_number: number;
-  date: string;
-  is_open_for_requests: boolean;
-  approved_request_id: number | null;
-};
-
-type DayAgg = {
-  day_id: number;
-  total_requests: number;
-  approved_requests: number;
-};
-
-const TARGET_YEAR = 2026;
-
-const RamadanPage: React.FC = () => {
-  const [masjids, setMasjids] = useState<Masjid[]>([]);
-  const [selectedMasjidId, setSelectedMasjidId] = useState<string | null>(null);
-
-  const [ramadan, setRamadan] = useState<RamadanSettings | null>(null);
-  const [ramadanLoading, setRamadanLoading] = useState(false);
-  const [ramadanError, setRamadanError] = useState<string | null>(null);
-
-  const [days, setDays] = useState<RamadanDay[]>([]);
-  const [dayAggs, setDayAggs] = useState<DayAgg[]>([]);
-  const [daysLoading, setDaysLoading] = useState(false);
-
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [generatingDays, setGeneratingDays] = useState(false);
-  const [updatingDay, setUpdatingDay] = useState<number | null>(null);
-
-  const [settingsDraft, setSettingsDraft] = useState<Partial<RamadanSettings>>({
-    gregorian_year: TARGET_YEAR,
-    is_active: true,
+function todayRomeIso(): string {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Rome",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 
-  const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
-  const [settingsMessageType, setSettingsMessageType] = useState<
-    "success" | "error" | null
-  >(null);
+  const parts = fmt.formatToParts(new Date());
+  const y = parts.find((p) => p.type === "year")?.value ?? "1970";
+  const m = parts.find((p) => p.type === "month")?.value ?? "01";
+  const d = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${y}-${m}-${d}`;
+}
 
-  const selectedMasjid = useMemo(
-    () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
-    [masjids, selectedMasjidId]
-  );
+function addDaysIso(dateIso: string, deltaDays: number): string {
+  const d = new Date(`${dateIso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const da = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${da}`;
+}
 
-  const aggByDayId = useMemo(() => {
-    const map = new Map<number, DayAgg>();
-    for (const a of dayAggs) map.set(a.day_id, a);
-    return map;
-  }, [dayAggs]);
+function isoRangeInclusive(startIso: string, endIso: string): string[] {
+  if (!startIso || !endIso) return [];
+  if (endIso < startIso) return [];
+  const out: string[] = [];
+  let cur = startIso;
+  while (cur <= endIso) {
+    out.push(cur);
+    cur = addDaysIso(cur, 1);
+  }
+  return out;
+}
 
-  // Derived: day count from draft dates (even before saving)
-  const draftDayCount = useMemo(() => {
-    if (!settingsDraft.start_date || !settingsDraft.end_date) return null;
-    const start = new Date(settingsDraft.start_date);
-    const end = new Date(settingsDraft.end_date);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
-      return null;
-    }
-    const msPerDay = 24 * 60 * 60 * 1000;
-    return Math.round((end.getTime() - start.getTime()) / msPerDay) + 1;
-  }, [settingsDraft.start_date, settingsDraft.end_date]);
+function timeToInputHHMM(v: string | null): string {
+  if (!v) return "";
+  const [hh, mm] = v.split(":");
+  if (!hh || !mm) return "";
+  return `${hh.padStart(2, "0")}:${mm.padStart(2, "0")}`;
+}
+
+function inputHHMMToDbTime(v: string): string | null {
+  if (!v) return null;
+  return `${v}:00`;
+}
+
+function clampInt(v: string, min: number, max: number): number | null {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  const r = Math.round(n);
+  if (r < min || r > max) return null;
+  return r;
+}
+
+export default function RamadanPage() {
+  const [loading, setLoading] = useState(true);
+
+  // ✅ dropdown
+  const [masjids, setMasjids] = useState<Masjid[]>([]);
+  const [masjidId, setMasjidId] = useState<string>("");
+
+  // Settings (form state)
+  const [enabled, setEnabled] = useState(false);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [taraweehTime, setTaraweehTime] = useState<string>(""); // input HH:MM
+  const [taraweehRakaah, setTaraweehRakaah] = useState<string>(""); // input string
+
+  // Daily rows (date -> values)
+  const [daysMap, setDaysMap] = useState<Record<string, { suhoor: string; iftar: string }>>({});
+
+  // Status UI
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string>("");
+  const [error, setError] = useState<string>("");
+
+  const initialSnapshotRef = useRef<string>("");
+
+  const todayIso = useMemo(() => todayRomeIso(), []);
+  const daysInRange = useMemo(() => isoRangeInclusive(startDate, endDate), [startDate, endDate]);
+
+  const dirty = useMemo(() => {
+    const snapshot = JSON.stringify({
+      masjidId,
+      enabled,
+      startDate,
+      endDate,
+      taraweehTime,
+      taraweehRakaah,
+      daysMap,
+    });
+    return snapshot !== initialSnapshotRef.current;
+  }, [masjidId, enabled, startDate, endDate, taraweehTime, taraweehRakaah, daysMap]);
 
   // ---------------------------------------------------------------------------
-  // Load masjids
+  // 1) Load masjids for dropdown (✅ same as PrayerTimesPage)
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const loadMasjids = async () => {
-      const { data, error } = await supabase
-        .from("public_masjids")
-        .select("id, official_name, city")
-        .order("city", { ascending: true });
+    let mounted = true;
 
-      if (error) {
-        console.error("Error loading masjids", error);
-        setMasjids([]);
-      } else {
-        setMasjids(data ?? []);
-        if (data && data.length > 0) {
-          setSelectedMasjidId((prev) => prev ?? data[0].id);
+    async function loadMasjids() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const { data, error } = await supabase
+          .from("public_masjids")
+          .select("id, official_name, city")
+          .order("city", { ascending: true })
+          .order("official_name", { ascending: true });
+
+        if (error) throw error;
+
+        const list = (data ?? []) as Masjid[];
+        if (!mounted) return;
+
+        setMasjids(list);
+
+        // default selection
+        if (list.length > 0) {
+          setMasjidId((prev) => prev || list[0].id);
+        } else {
+          setMasjidId("");
         }
+      } catch (e: unknown) {
+        if (!mounted) return;
+        setError((e instanceof Error ? e.message : String(e)) ?? "Could not load masjids.");
+      } finally {
+        if (mounted) setLoading(false);
       }
-    };
+    }
 
     void loadMasjids();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Load Ramadan settings for selected masjid & TARGET_YEAR
+  // 2) When masjid changes: load settings + days
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const loadRamadan = async () => {
-      if (!selectedMasjidId) {
-        setRamadan(null);
-        setSettingsDraft({ gregorian_year: TARGET_YEAR, is_active: true });
-        setDays([]);
-        setDayAggs([]);
-        return;
+    let mounted = true;
+    if (!masjidId) return;
+
+    async function loadAll() {
+      setError("");
+      setStatus("");
+      setSaving(false);
+
+      try {
+        // Settings (maybeSingle)
+        const { data: s, error: sErr } = await supabase
+          .from("masjid_ramadhan_settings")
+          .select("masjid_id,enabled,start_date,end_date,taraweeh_start_time,taraweeh_rakaah")
+          .eq("masjid_id", masjidId)
+          .maybeSingle();
+
+        if (sErr) throw sErr;
+
+        const settings = (s as SettingsRow | null) ?? null;
+        const defaultStart = settings?.start_date ?? "";
+        const defaultEnd = settings?.end_date ?? "";
+
+        if (!mounted) return;
+
+        setEnabled(settings?.enabled ?? false);
+        setStartDate(defaultStart);
+        setEndDate(defaultEnd);
+        setTaraweehTime(timeToInputHHMM(settings?.taraweeh_start_time ?? null));
+        setTaraweehRakaah(settings?.taraweeh_rakaah != null ? String(settings.taraweeh_rakaah) : "");
+
+        // Days (if range exists -> range query, else load any existing to not lose data)
+        let daysRows: DayRow[] = [];
+
+        if (settings?.start_date && settings?.end_date) {
+          const { data: d, error: dErr } = await supabase
+            .from("masjid_ramadhan_days")
+            .select("id,masjid_id,date,suhoor_end_time,iftar_time")
+            .eq("masjid_id", masjidId)
+            .gte("date", settings.start_date)
+            .lte("date", settings.end_date)
+            .order("date", { ascending: true });
+
+          if (dErr) throw dErr;
+          daysRows = (d ?? []) as DayRow[];
+        } else {
+          const { data: d, error: dErr } = await supabase
+            .from("masjid_ramadhan_days")
+            .select("id,masjid_id,date,suhoor_end_time,iftar_time")
+            .eq("masjid_id", masjidId)
+            .order("date", { ascending: true })
+            .limit(120);
+
+          if (dErr) throw dErr;
+          daysRows = (d ?? []) as DayRow[];
+        }
+
+        if (!mounted) return;
+
+        const m: Record<string, { suhoor: string; iftar: string }> = {};
+        for (const r of daysRows) {
+          m[r.date] = {
+            suhoor: timeToInputHHMM(r.suhoor_end_time),
+            iftar: timeToInputHHMM(r.iftar_time),
+          };
+        }
+        setDaysMap(m);
+
+        // snapshot after load
+        initialSnapshotRef.current = JSON.stringify({
+          masjidId,
+          enabled: settings?.enabled ?? false,
+          startDate: defaultStart,
+          endDate: defaultEnd,
+          taraweehTime: timeToInputHHMM(settings?.taraweeh_start_time ?? null),
+          taraweehRakaah: settings?.taraweeh_rakaah != null ? String(settings.taraweeh_rakaah) : "",
+          daysMap: m,
+        });
+      } catch (e: unknown) {
+        if (!mounted) return;
+        setError((e instanceof Error ? e.message : String(e)) ?? "Could not load Ramadhan settings.");
       }
+    }
 
-      setRamadanLoading(true);
-      setRamadanError(null);
-      setSettingsMessage(null);
-      setSettingsMessageType(null);
-
-      const { data, error } = await supabase
-        .from("ramadan_settings")
-        .select("*")
-        .eq("masjid_id", selectedMasjidId)
-        .eq("gregorian_year", TARGET_YEAR)
-        .maybeSingle();
-
-      if (error && error.code !== "PGRST116") {
-        console.error("Error loading ramadan_settings", error);
-        setRamadan(null);
-        setSettingsDraft({ gregorian_year: TARGET_YEAR, is_active: true });
-        setRamadanError(error.message);
-        setDays([]);
-        setDayAggs([]);
-      } else if (!data) {
-        setRamadan(null);
-        setSettingsDraft({ gregorian_year: TARGET_YEAR, is_active: true });
-        setDays([]);
-        setDayAggs([]);
-      } else {
-        setRamadan(data as RamadanSettings);
-        setSettingsDraft(data as RamadanSettings);
-      }
-
-      setRamadanLoading(false);
+    void loadAll();
+    return () => {
+      mounted = false;
     };
-
-    void loadRamadan();
-  }, [selectedMasjidId]);
+  }, [masjidId]);
 
   // ---------------------------------------------------------------------------
-  // Load days + aggregates when Ramadan exists
+  // 3) When range changes, ensure daysMap has keys for each date
   // ---------------------------------------------------------------------------
-  const loadDaysAndAggs = async (r: RamadanSettings | null) => {
-    if (!r) {
-      setDays([]);
-      setDayAggs([]);
-      return;
-    }
-
-    setDaysLoading(true);
-
-    const { data: dayRows, error: dayError } = await supabase
-      .from("ramadan_iftar_days")
-      .select("*")
-      .eq("ramadan_id", r.id)
-      .order("day_number", { ascending: true });
-
-    if (dayError) {
-      console.error("Error loading ramadan_iftar_days", dayError);
-      setDays([]);
-    } else {
-      setDays(dayRows ?? []);
-    }
-
-    const { data: aggRows, error: aggError } = await supabase
-      .from("iftar_requests")
-      .select("ramadan_day_id, status")
-      .eq("ramadan_id", r.id);
-
-    if (aggError) {
-      console.error("Error loading iftar_requests", aggError);
-      setDayAggs([]);
-    } else {
-      const aggMap = new Map<number, DayAgg>();
-      for (const row of aggRows ?? []) {
-        const dayId = row.ramadan_day_id as number;
-        if (!aggMap.has(dayId)) {
-          aggMap.set(dayId, {
-            day_id: dayId,
-            total_requests: 0,
-            approved_requests: 0,
-          });
-        }
-        const agg = aggMap.get(dayId)!;
-        agg.total_requests += 1;
-        if (row.status === "approved") {
-          agg.approved_requests += 1;
-        }
-      }
-      setDayAggs([...aggMap.values()]);
-    }
-
-    setDaysLoading(false);
-  };
-
   useEffect(() => {
-    void loadDaysAndAggs(ramadan);
-  }, [ramadan]);
+    if (!startDate || !endDate) return;
+    if (endDate < startDate) return;
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  const updateSettingsDraft = (patch: Partial<RamadanSettings>) => {
-    setSettingsDraft((prev) => ({ ...prev, ...patch }));
-    setSettingsMessage(null);
-    setSettingsMessageType(null);
-  };
-
-  const fillEstimatedRamadan2026 = () => {
-    // rough guess; you can adjust later
-    updateSettingsDraft({
-      start_date: "2026-02-28",
-      end_date: "2026-03-29",
+    setDaysMap((prev) => {
+      const next = { ...prev };
+      for (const d of daysInRange) {
+        if (!next[d]) next[d] = { suhoor: "", iftar: "" };
+      }
+      // remove out of range
+      for (const k of Object.keys(next)) {
+        if (k < startDate || k > endDate) delete next[k];
+      }
+      return next;
     });
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
-  const setBookingWindowFromNowToStart = () => {
-    if (!settingsDraft.start_date) return;
-    const start = new Date(settingsDraft.start_date);
-    const now = new Date();
+  const selectedMasjid = useMemo(
+    () => masjids.find((m) => m.id === masjidId) ?? null,
+    [masjids, masjidId]
+  );
 
-    updateSettingsDraft({
-      booking_start: now.toISOString(),
-      booking_end: new Date(start.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    });
-  };
+  function updateDay(dateIso: string, key: "suhoor" | "iftar", value: string) {
+    setDaysMap((prev) => ({
+      ...prev,
+      [dateIso]: { ...(prev[dateIso] ?? { suhoor: "", iftar: "" }), [key]: value },
+    }));
+  }
 
-  // Central: generate all days for a given Ramadan (delete + insert)
-  const generateDaysFor = async (r: RamadanSettings) => {
-    const start = new Date(r.start_date);
-    const end = new Date(r.end_date);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
-      setSettingsMessage("Invalid start/end dates in saved settings.");
-      setSettingsMessageType("error");
-      return;
-    }
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    setStatus("");
 
-    const daysToInsert: {
-      ramadan_id: number;
-      masjid_id: string;
-      day_number: number;
-      date: string;
-    }[] = [];
+    try {
+      if (!masjidId) throw new Error("Select a masjid first.");
+      if (!startDate || !endDate) throw new Error("Please set start and end dates.");
+      if (endDate < startDate) throw new Error("End date must be after start date.");
 
-    let dayNum = 1;
-    for (
-      let d = new Date(start);
-      d <= end;
-      d = new Date(d.getTime() + 24 * 60 * 60 * 1000)
-    ) {
-      const iso = d.toISOString().slice(0, 10);
-      daysToInsert.push({
-        ramadan_id: r.id,
-        masjid_id: r.masjid_id,
-        day_number: dayNum,
-        date: iso,
+      const rakaah = taraweehRakaah ? clampInt(taraweehRakaah, 2, 60) : null;
+      if (taraweehRakaah && rakaah == null) {
+        throw new Error("Taraweeh rakaʿah must be a number between 2 and 60.");
+      }
+
+      // 1) Upsert settings (masjid_id PK)
+      const settingsPayload: Partial<SettingsRow> & { masjid_id: string } = {
+        masjid_id: masjidId,
+        enabled,
+        start_date: startDate,
+        end_date: endDate,
+        taraweeh_start_time: inputHHMMToDbTime(taraweehTime),
+        taraweeh_rakaah: rakaah,
+      };
+
+      const { error: upErr } = await supabase
+        .from("masjid_ramadhan_settings")
+        .upsert(settingsPayload, { onConflict: "masjid_id" });
+
+      if (upErr) throw upErr;
+
+      // 2) Upsert day rows (unique masjid_id+date)
+      const rows = daysInRange.map((d) => {
+        const val = daysMap[d] ?? { suhoor: "", iftar: "" };
+        return {
+          masjid_id: masjidId,
+          date: d,
+          suhoor_end_time: inputHHMMToDbTime(val.suhoor),
+          iftar_time: inputHHMMToDbTime(val.iftar),
+        };
       });
-      dayNum++;
-    }
 
-    setGeneratingDays(true);
-    try {
-      // Clear previous calendar for this Ramadan (avoids onConflict issues)
-      const { error: delError } = await supabase
-        .from("ramadan_iftar_days")
-        .delete()
-        .eq("ramadan_id", r.id);
+      const { error: daysErr } = await supabase
+        .from("masjid_ramadhan_days")
+        .upsert(rows, { onConflict: "masjid_id,date" });
 
-      if (delError) {
-        console.error("Error deleting old ramadan_iftar_days", delError);
-        setSettingsMessage(delError.message);
-        setSettingsMessageType("error");
-        return;
-      }
+      if (daysErr) throw daysErr;
 
-      const { error: insError } = await supabase
-        .from("ramadan_iftar_days")
-        .insert(daysToInsert);
+      setStatus("Saved.");
 
-      if (insError) {
-        console.error("Error inserting ramadan_iftar_days", insError);
-        setSettingsMessage(insError.message);
-        setSettingsMessageType("error");
-        return;
-      }
-
-      await loadDaysAndAggs(r);
-      setSettingsMessage("Ramadan days regenerated from the saved schedule.");
-      setSettingsMessageType("success");
+      initialSnapshotRef.current = JSON.stringify({
+        masjidId,
+        enabled,
+        startDate,
+        endDate,
+        taraweehTime,
+        taraweehRakaah,
+        daysMap,
+      });
+    } catch (e: unknown) {
+      setError((e instanceof Error ? e.message : String(e)) ?? "Save failed.");
     } finally {
-      setGeneratingDays(false);
+      setSaving(false);
+      window.setTimeout(() => setStatus(""), 2000);
     }
-  };
+  }
 
-  // ---------------------------------------------------------------------------
-  // Save settings (now also regenerates days)
-  // ---------------------------------------------------------------------------
-  const handleSaveSettings = async () => {
-    if (!selectedMasjidId) return;
-
-    setSettingsMessage(null);
-    setSettingsMessageType(null);
-
-    if (!settingsDraft.start_date || !settingsDraft.end_date) {
-      setSettingsMessage("Please set both start and end date for Ramadan.");
-      setSettingsMessageType("error");
-      return;
-    }
-
-    const start = new Date(settingsDraft.start_date);
-    const end = new Date(settingsDraft.end_date);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
-      setSettingsMessage("Start date must be before or equal to end date.");
-      setSettingsMessageType("error");
-      return;
-    }
-
-    setSavingSettings(true);
-    try {
-      if (!ramadan) {
-        const { data, error } = await supabase
-          .from("ramadan_settings")
-          .insert({
-            masjid_id: selectedMasjidId,
-            gregorian_year: TARGET_YEAR,
-            hijri_year: settingsDraft.hijri_year ?? null,
-            start_date: settingsDraft.start_date,
-            end_date: settingsDraft.end_date,
-            is_active: settingsDraft.is_active ?? true,
-            booking_start: settingsDraft.booking_start,
-            booking_end: settingsDraft.booking_end,
-          })
-          .select("*")
-          .single();
-
-        if (error || !data) {
-          console.error("Error inserting ramadan_settings", error);
-          setSettingsMessage(error?.message ?? "Failed to save settings.");
-          setSettingsMessageType("error");
-        } else {
-          const newR = data as RamadanSettings;
-          setRamadan(newR);
-          setSettingsDraft(newR);
-          await generateDaysFor(newR);
-        }
-      } else {
-        const { data, error } = await supabase
-          .from("ramadan_settings")
-          .update({
-            hijri_year: settingsDraft.hijri_year ?? null,
-            start_date: settingsDraft.start_date,
-            end_date: settingsDraft.end_date,
-            is_active: settingsDraft.is_active ?? true,
-            booking_start: settingsDraft.booking_start,
-            booking_end: settingsDraft.booking_end,
-          })
-          .eq("id", ramadan.id)
-          .select("*")
-          .single();
-
-        if (error || !data) {
-          console.error("Error updating ramadan_settings", error);
-          setSettingsMessage(error?.message ?? "Failed to save settings.");
-          setSettingsMessageType("error");
-        } else {
-          const newR = data as RamadanSettings;
-          setRamadan(newR);
-          setSettingsDraft(newR);
-          await generateDaysFor(newR);
-        }
-      }
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  const handleToggleDayOpen = async (day: RamadanDay) => {
-    setUpdatingDay(day.id);
-    try {
-      const { data, error } = await supabase
-        .from("ramadan_iftar_days")
-        .update({ is_open_for_requests: !day.is_open_for_requests })
-        .eq("id", day.id)
-        .select("*")
-        .single();
-
-      if (error) {
-        console.error("Error updating ramadan_iftar_days row", error);
-        setSettingsMessage(error.message);
-        setSettingsMessageType("error");
-      } else {
-        setDays((prev) =>
-          prev.map((d) => (d.id === day.id ? (data as RamadanDay) : d))
-        );
-      }
-    } finally {
-      setUpdatingDay(null);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // Rendering helpers
-  // ---------------------------------------------------------------------------
-  const renderDayStatus = (day: RamadanDay) => {
-    const agg = aggByDayId.get(day.id);
-
-    if (!day.is_open_for_requests) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-200">
-          Closed
-        </span>
-      );
-    }
-
-    if (!agg || agg.total_requests === 0) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-300">
-          Available
-        </span>
-      );
-    }
-
-    if (agg.approved_requests > 0) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-emerald-500 text-emerald-950 font-medium">
-          Approved
-        </span>
-      );
-    }
-
+  if (loading) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-amber-400 text-amber-950 font-medium">
-        Taken (pending)
-      </span>
+      <div className="min-h-[50vh] flex items-center justify-center text-xs text-slate-300">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-6 w-6 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+          <span>Loading Ramadhan setup…</span>
+        </div>
+      </div>
     );
-  };
+  }
 
-  // ---------------------------------------------------------------------------
-  // UI
-  // ---------------------------------------------------------------------------
+  if (!masjids.length) {
+    return (
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-xs text-slate-300">
+        No masjids found in <span className="font-mono">public_masjids</span>.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-slate-100">
-            Ramadan {TARGET_YEAR} configuration
-          </h2>
-          <p className="text-xs text-slate-400">
-            Select a masjid, define Ramadan dates and booking window. Saving
-            will regenerate the sponsorship calendar automatically.
-          </p>
+      {/* Top bar */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-1">
+          <div className="text-xs text-slate-400">
+            Today (Europe/Rome): <span className="text-slate-200 font-mono">{todayIso}</span>
+          </div>
+          <div className="text-xs text-slate-400">
+            Selected masjid:{" "}
+            <span className="text-slate-200 font-medium">
+              {selectedMasjid?.official_name ?? "—"}
+            </span>
+            {selectedMasjid?.city ? <span className="text-slate-500"> · {selectedMasjid.city}</span> : null}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="text-xs text-slate-400">Masjid:</div>
+          {dirty && (
+            <span className="text-[11px] px-2 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-200">
+              Unsaved changes
+            </span>
+          )}
+          {status && (
+            <span className="text-[11px] px-2 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200">
+              {status}
+            </span>
+          )}
+          {error && (
+            <span className="text-[11px] px-2 py-1 rounded-full border border-rose-500/40 bg-rose-500/10 text-rose-200">
+              {error}
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !dirty}
+            className={`rounded-lg px-3 py-2 text-[11px] font-semibold border ${
+              saving || !dirty
+                ? "border-slate-800 bg-slate-900 text-slate-500 cursor-not-allowed"
+                : "border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
+            }`}
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </div>
+
+      {/* Masjid selector + settings */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="text-sm font-semibold">Masjid</div>
+          <p className="mt-1 text-xs text-slate-400">
+            Choose the masjid you want to configure for Ramadhan.
+          </p>
+
+          <label className="mt-3 block text-[11px] text-slate-400">Masjid</label>
           <select
-            className="text-sm bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100"
-            value={selectedMasjidId ?? ""}
-            onChange={(e) => setSelectedMasjidId(e.target.value || null)}
+            value={masjidId}
+            onChange={(e) => setMasjidId(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
           >
             {masjids.map((m) => (
               <option key={m.id} value={m.id}>
@@ -488,322 +447,186 @@ const RamadanPage: React.FC = () => {
               </option>
             ))}
           </select>
-        </div>
-      </div>
 
-      {/* Message */}
-      {settingsMessage && (
-        <div
-          className={`rounded-lg border px-3 py-2 text-xs ${
-            settingsMessageType === "success"
-              ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-200"
-              : "border-red-500/70 bg-red-500/10 text-red-200"
-          }`}
-        >
-          {settingsMessage}
-        </div>
-      )}
-
-      {/* Settings + summary */}
-      <div className="grid md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)] gap-6">
-        {/* Settings card */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-100">
-              Ramadan settings
-            </h3>
-            {ramadanLoading && (
-              <span className="text-xs text-slate-400">Loading…</span>
-            )}
-          </div>
-
-          {ramadanError && (
-            <p className="text-xs text-red-300">{ramadanError}</p>
-          )}
-
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="space-y-1.5">
-              <label className="block text-slate-300">Gregorian year</label>
-              <input
-                type="number"
-                value={settingsDraft.gregorian_year ?? TARGET_YEAR}
-                disabled
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-slate-300">
-                Hijri year (optional)
-              </label>
-              <input
-                type="number"
-                value={settingsDraft.hijri_year ?? ""}
-                onChange={(e) =>
-                  updateSettingsDraft({
-                    hijri_year: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-slate-300">Start date</label>
-                <button
-                  type="button"
-                  className="text-[10px] text-emerald-300 underline"
-                  onClick={fillEstimatedRamadan2026}
-                >
-                  Guess 2026 Ramadan
-                </button>
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 px-3 py-2">
+            <div>
+              <div className="text-[12px] font-medium text-slate-100">Enable Ramadhan tab</div>
+              <div className="text-[11px] text-slate-500">
+                Mobile shows the Ramadhan tab only inside the date window.
               </div>
-              <input
-                type="date"
-                value={settingsDraft.start_date ?? ""}
-                onChange={(e) =>
-                  updateSettingsDraft({ start_date: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-              />
             </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-slate-300">End date</label>
-              <input
-                type="date"
-                value={settingsDraft.end_date ?? ""}
-                onChange={(e) =>
-                  updateSettingsDraft({ end_date: e.target.value })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-slate-300">
-                  Booking start (optional)
-                </label>
-                <button
-                  type="button"
-                  className="text-[10px] text-emerald-300 underline"
-                  onClick={setBookingWindowFromNowToStart}
-                  disabled={!settingsDraft.start_date}
-                >
-                  From now → before Ramadan
-                </button>
-              </div>
-              <input
-                type="datetime-local"
-                value={
-                  settingsDraft.booking_start
-                    ? settingsDraft.booking_start.slice(0, 16)
-                    : ""
-                }
-                onChange={(e) =>
-                  updateSettingsDraft({
-                    booking_start: e.target.value
-                      ? new Date(e.target.value).toISOString()
-                      : null,
-                  })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-slate-300">
-                Booking end (optional)
-              </label>
-              <input
-                type="datetime-local"
-                value={
-                  settingsDraft.booking_end
-                    ? settingsDraft.booking_end.slice(0, 16)
-                    : ""
-                }
-                onChange={(e) =>
-                  updateSettingsDraft({
-                    booking_end: e.target.value
-                      ? new Date(e.target.value).toISOString()
-                      : null,
-                  })
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <label className="inline-flex items-center gap-2 text-xs text-slate-300">
-              <input
-                type="checkbox"
-                checked={settingsDraft.is_active ?? true}
-                onChange={(e) =>
-                  updateSettingsDraft({ is_active: e.target.checked })
-                }
-                className="rounded border-slate-600 bg-slate-900 text-emerald-500"
-              />
-              Ramadan is active
-            </label>
-
             <button
               type="button"
-              onClick={handleSaveSettings}
-              disabled={savingSettings || !selectedMasjid}
-              className="px-3 py-1.5 rounded-lg bg-emerald-500 text-emerald-950 text-xs font-semibold disabled:opacity-60"
+              onClick={() => setEnabled((v) => !v)}
+              className={`h-8 w-14 rounded-full border transition ${
+                enabled
+                  ? "border-emerald-500/50 bg-emerald-500/30"
+                  : "border-slate-700 bg-slate-900"
+              }`}
+              aria-label="Toggle Ramadhan"
             >
-              {savingSettings ? "Saving…" : "Save & regenerate calendar"}
+              <div
+                className={`h-6 w-6 rounded-full bg-slate-50 transition-transform ${
+                  enabled ? "translate-x-7" : "translate-x-1"
+                }`}
+              />
             </button>
           </div>
         </div>
 
-        {/* Summary card */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-3 text-xs">
-          <h3 className="text-sm font-semibold text-slate-100">
-            Calendar & booking summary
-          </h3>
-          <p className="text-slate-400">
-            Check that your dates and generated calendar look sensible. The
-            mobile app will use this to decide which days can be requested.
-          </p>
+        <div className="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div>
+            <div className="text-sm font-semibold">Season settings</div>
+            <p className="mt-1 text-xs text-slate-400">
+              Set the date window (Europe/Rome) and optional Taraweeh defaults.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <div className="flex flex-col">
-              <span className="text-slate-400">Draft day count</span>
-              <span
-                className={`text-base font-semibold ${
-                  draftDayCount === 29 || draftDayCount === 30
-                    ? "text-emerald-300"
-                    : "text-amber-300"
-                }`}
-              >
-                {draftDayCount ?? "—"}
-              </span>
-              <span className="text-[11px] text-slate-500">
-                Expected: 29 or 30 days. It’s okay if the real moon sighting
-                shifts by a day.
-              </span>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[11px] text-slate-400">Start date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              />
             </div>
 
-            <div className="flex flex-col">
-              <span className="text-slate-400">Generated days</span>
-              <span className="text-base text-slate-100 font-semibold">
-                {days.length || "—"}
-              </span>
-              <span className="text-[11px] text-slate-500">
-                Calendar is always regenerated from the latest saved dates.
-              </span>
+            <div>
+              <label className="block text-[11px] text-slate-400">End date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              />
+              {startDate && endDate && endDate < startDate && (
+                <div className="mt-1 text-[11px] text-rose-300">
+                  End date must be after start date.
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+              <div className="text-[11px] text-slate-400">Days in range</div>
+              <div className="mt-1 text-xl font-black text-slate-100">
+                {daysInRange.length || "—"}
+              </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => ramadan && void generateDaysFor(ramadan)}
-            disabled={generatingDays || !ramadan}
-            className="mt-3 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-100 font-medium disabled:opacity-60"
-          >
-            {generatingDays ? "Regenerating days…" : "Regenerate days from dates"}
-          </button>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] text-slate-400">Taraweeh start (optional)</label>
+              <input
+                type="time"
+                value={taraweehTime}
+                onChange={(e) => setTaraweehTime(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] text-slate-400">Taraweeh rakaʿah (optional)</label>
+              <input
+                type="number"
+                min={2}
+                max={60}
+                value={taraweehRakaah}
+                onChange={(e) => setTaraweehRakaah(e.target.value)}
+                placeholder="8 or 20"
+                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 text-[11px] text-slate-500">
+            Mobile rule: tab shows only if{" "}
+            <span className="font-mono text-slate-200">enabled</span> and{" "}
+            <span className="font-mono text-slate-200">today ∈ [start_date, end_date]</span>.
+          </div>
         </div>
       </div>
 
-      {/* Legend + day cards */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-          <span className="font-semibold text-slate-200">Ramadan days</span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300">
-            Available
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-400 text-amber-950">
-            Taken (pending)
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-500 text-emerald-950">
-            Approved
-          </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-800 text-slate-200">
-            Closed
-          </span>
+      {/* Daily table */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <div>
+          <div className="text-sm font-semibold">Daily timetable</div>
+          <p className="mt-1 text-xs text-slate-400">
+            Edit Suhoor end and Iftar time for each day. (Safe to upsert.)
+          </p>
         </div>
 
-        {daysLoading ? (
-          <div className="text-xs text-slate-400">Loading calendar…</div>
-        ) : days.length === 0 ? (
-          <div className="text-xs text-slate-400">
-            No calendar generated yet. Save settings to create the Ramadan
-            calendar for this masjid.
+        {!startDate || !endDate ? (
+          <div className="mt-4 text-xs text-slate-400">
+            Set a start and end date to generate the daily table.
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
-            {days.map((day) => {
-              const agg = aggByDayId.get(day.id);
-              const dateLabel = new Date(day.date).toLocaleDateString(
-                "it-IT",
-                {
-                  weekday: "short",
-                  day: "2-digit",
-                  month: "2-digit",
-                }
-              );
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-[11px] uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-800">
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">Day #</th>
+                  <th className="py-2 pr-3">Suhoor ends</th>
+                  <th className="py-2 pr-3">Iftar</th>
+                  <th className="py-2 pr-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {daysInRange.map((d, idx) => {
+                  const row = daysMap[d] ?? { suhoor: "", iftar: "" };
+                  const isToday = d === todayIso;
+                  const filled = !!row.suhoor && !!row.iftar;
 
-              return (
-                <div
-                  key={day.id}
-                  className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 flex flex-col gap-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] text-slate-500">
-                        Day {day.day_number}
-                      </div>
-                      <div className="text-xs text-slate-100">
-                        {dateLabel}
-                      </div>
-                    </div>
-                    {renderDayStatus(day)}
-                  </div>
-
-                  <div className="text-[11px] text-slate-400">
-                    Requests:{" "}
-                    <span className="text-slate-200">
-                      {agg?.total_requests ?? 0}
-                    </span>
-                    {agg && agg.approved_requests > 0 && (
-                      <span className="text-emerald-300">
-                        {" "}
-                        • {agg.approved_requests} approved
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-auto flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => void handleToggleDayOpen(day)}
-                      disabled={updatingDay === day.id}
-                      className={`px-2.5 py-1 rounded-full border text-[11px] ${
-                        day.is_open_for_requests
-                          ? "bg-emerald-500/15 border-emerald-500/60 text-emerald-300"
-                          : "bg-slate-800 border-slate-600 text-slate-300"
-                      } disabled:opacity-60`}
-                    >
-                      {updatingDay === day.id
-                        ? "Updating…"
-                        : day.is_open_for_requests
-                        ? "Open"
-                        : "Closed"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                  return (
+                    <tr key={d} className="border-b border-slate-900/60">
+                      <td className="py-2 pr-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-[12px] text-slate-200">{d}</span>
+                          {isToday && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3 text-slate-400">{idx + 1}</td>
+                      <td className="py-2 pr-3">
+                        <input
+                          type="time"
+                          value={row.suhoor}
+                          onChange={(e) => updateDay(d, "suhoor", e.target.value)}
+                          className="w-36 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                        />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <input
+                          type="time"
+                          value={row.iftar}
+                          onChange={(e) => updateDay(d, "iftar", e.target.value)}
+                          className="w-36 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                        />
+                      </td>
+                      <td className="py-2 pr-3">
+                        {filled ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200">
+                            Ready
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full border border-slate-700 bg-slate-900 text-slate-400">
+                            Missing
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default RamadanPage;
+}
