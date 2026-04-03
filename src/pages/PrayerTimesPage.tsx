@@ -47,6 +47,9 @@ const getTodayIsoRome = (): string => {
 const PrayerTimesPage: React.FC = () => {
   const [masjids, setMasjids] = useState<Masjid[]>([]);
   const [selectedMasjidId, setSelectedMasjidId] = useState<string | null>(null);
+  const [selectedTargetMasjidIds, setSelectedTargetMasjidIds] = useState<
+    string[]
+  >([]);
 
   const [selectedDate, setSelectedDate] = useState<string>(() =>
     getTodayIsoRome()
@@ -69,6 +72,10 @@ const PrayerTimesPage: React.FC = () => {
     () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
     [masjids, selectedMasjidId]
   );
+  const cityMasjids = useMemo(() => {
+    if (!selectedMasjid?.city) return [];
+    return masjids.filter((m) => m.city === selectedMasjid.city);
+  }, [masjids, selectedMasjid?.city]);
 
   // ---------------------------------------------------------------------------
   // Load masjids
@@ -179,6 +186,18 @@ const PrayerTimesPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMasjidId, selectedDate]);
 
+  useEffect(() => {
+    if (!selectedMasjid?.city) {
+      setSelectedTargetMasjidIds([]);
+      return;
+    }
+
+    const idsInCity = masjids
+      .filter((m) => m.city === selectedMasjid.city)
+      .map((m) => m.id);
+    setSelectedTargetMasjidIds(idsInCity);
+  }, [masjids, selectedMasjidId, selectedMasjid?.city]);
+
   const updateRow = (
     prayerKey: PrayerKey,
     patch: Partial<Pick<PrayerRow, "start_time" | "jamaat_time">>
@@ -269,6 +288,13 @@ const PrayerTimesPage: React.FC = () => {
 
   const handleSave = async () => {
     if (!selectedMasjidId || !selectedDate) return;
+    if (selectedTargetMasjidIds.length === 0) {
+      setMessage(
+        "Select at least one masjid target. By default all masjids in the city are selected."
+      );
+      setMessageType("error");
+      return;
+    }
 
     // validate: either both empty or both filled
     for (const r of rows) {
@@ -289,19 +315,26 @@ const PrayerTimesPage: React.FC = () => {
 
     try {
       if (toSave.length === 0) {
-        // If everything is cleared, delete rows for that day
-        const { error } = await supabase
-          .from("masjid_prayer_times")
-          .delete()
-          .eq("masjid_id", selectedMasjidId)
-          .eq("date", selectedDate);
+        // If everything is cleared, delete rows for that day for all selected targets
+        const deleteResults = await Promise.all(
+          selectedTargetMasjidIds.map((masjidId) =>
+            supabase
+              .from("masjid_prayer_times")
+              .delete()
+              .eq("masjid_id", masjidId)
+              .eq("date", selectedDate)
+          )
+        );
+        const firstError = deleteResults.find((r) => r.error)?.error;
 
-        if (error) {
-          console.error("Error deleting masjid_prayer_times", error);
-          setMessage(error.message);
+        if (firstError) {
+          console.error("Error deleting masjid_prayer_times", firstError);
+          setMessage(firstError.message);
           setMessageType("error");
         } else {
-          setMessage("All prayer times cleared for this day.");
+          setMessage(
+            `All prayer times cleared for ${selectedTargetMasjidIds.length} masjid(s) in ${selectedMasjid?.city ?? "the selected city"}.`
+          );
           setMessageType("success");
           setRows(buildEmptyRows(selectedMasjidId, selectedDate));
           setDirty(false);
@@ -314,13 +347,15 @@ const PrayerTimesPage: React.FC = () => {
         }
       } else {
         // IMPORTANT: do NOT send 'id' at all, let Postgres bigserial generate it
-        const payload = toSave.map((r) => ({
-          masjid_id: r.masjid_id,
-          date: r.date,
-          prayer: r.prayer,
-          start_time: `${r.start_time}:00`,
-          jamaat_time: `${r.jamaat_time}:00`,
-        }));
+        const payload = selectedTargetMasjidIds.flatMap((masjidId) =>
+          toSave.map((r) => ({
+            masjid_id: masjidId,
+            date: r.date,
+            prayer: r.prayer,
+            start_time: `${r.start_time}:00`,
+            jamaat_time: `${r.jamaat_time}:00`,
+          }))
+        );
 
         const { error } = await supabase
           .from("masjid_prayer_times")
@@ -332,7 +367,9 @@ const PrayerTimesPage: React.FC = () => {
           setMessageType("error");
         } else {
           await loadPrayerTimes(selectedMasjidId, selectedDate);
-          setMessage("Prayer times saved for this day.");
+          setMessage(
+            `Prayer times saved for ${selectedTargetMasjidIds.length} masjid(s) in ${selectedMasjid?.city ?? "the selected city"}.`
+          );
           setMessageType("success");
           setDirty(false);
           setLastSavedAt(
@@ -365,6 +402,69 @@ const PrayerTimesPage: React.FC = () => {
             The mobile app will read these as the source of truth.
           </p>
         </div>
+
+        {selectedMasjid && cityMasjids.length > 0 && (
+          <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-3">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-100">
+                  Apply city-wide for {selectedMasjid.city}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  By default, all masjids in this city are selected.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedTargetMasjidIds(cityMasjids.map((m) => m.id))
+                  }
+                  className="text-[11px] px-2.5 py-1 rounded-md border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTargetMasjidIds([])}
+                  className="text-[11px] px-2.5 py-1 rounded-md border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {cityMasjids.map((m) => {
+                const checked = selectedTargetMasjidIds.includes(m.id);
+                return (
+                  <label
+                    key={m.id}
+                    className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-950/60 px-2.5 py-2 text-xs text-slate-200"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedTargetMasjidIds((prev) =>
+                            prev.includes(m.id) ? prev : [...prev, m.id]
+                          );
+                        } else {
+                          setSelectedTargetMasjidIds((prev) =>
+                            prev.filter((id) => id !== m.id)
+                          );
+                        }
+                        setDirty(true);
+                      }}
+                    />
+                    <span>{m.official_name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col gap-2 md:items-end text-xs">
           <div className="flex items-center gap-2">
