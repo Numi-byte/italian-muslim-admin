@@ -308,6 +308,7 @@ const PrayerTimesPage: React.FC = () => {
     }
 
     const toSave = rows.filter((r) => r.start_time && r.jamaat_time);
+    const isCityWideSave = selectedTargetMasjidIds.length > 1;
 
     setSaving(true);
     setMessage(null);
@@ -346,15 +347,60 @@ const PrayerTimesPage: React.FC = () => {
           );
         }
       } else {
+        const previousDayJamaatByMasjidPrayer = new Map<string, string>();
+        let missingPreviousDayJamaatCount = 0;
+
+        if (isCityWideSave) {
+          const current = new Date(selectedDate);
+          const prevDate = new Date(current.getTime() - 24 * 60 * 60 * 1000);
+          const prevIso = prevDate.toISOString().slice(0, 10);
+
+          const { data: previousDayRows, error: previousDayError } = await supabase
+            .from("masjid_prayer_times")
+            .select("masjid_id,prayer,jamaat_time")
+            .in("masjid_id", selectedTargetMasjidIds)
+            .eq("date", prevIso);
+
+          if (previousDayError) {
+            console.error(
+              "Error loading previous-day jamaat for city-wide save",
+              previousDayError
+            );
+            setMessage(previousDayError.message);
+            setMessageType("error");
+            return;
+          }
+
+          for (const row of (previousDayRows ?? []) as Pick<
+            PrayerTimeDbRow,
+            "masjid_id" | "prayer" | "jamaat_time"
+          >[]) {
+            previousDayJamaatByMasjidPrayer.set(
+              `${row.masjid_id}::${row.prayer}`,
+              row.jamaat_time.slice(0, 5)
+            );
+          }
+        }
+
         // IMPORTANT: do NOT send 'id' at all, let Postgres bigserial generate it
         const payload = selectedTargetMasjidIds.flatMap((masjidId) =>
-          toSave.map((r) => ({
-            masjid_id: masjidId,
-            date: r.date,
-            prayer: r.prayer,
-            start_time: `${r.start_time}:00`,
-            jamaat_time: `${r.jamaat_time}:00`,
-          }))
+          toSave.map((r) => {
+            const key = `${masjidId}::${r.prayer}`;
+            const jamaatFromPreviousDay = previousDayJamaatByMasjidPrayer.get(key);
+            if (isCityWideSave && !jamaatFromPreviousDay) {
+              missingPreviousDayJamaatCount += 1;
+            }
+
+            return {
+              masjid_id: masjidId,
+              date: r.date,
+              prayer: r.prayer,
+              start_time: `${r.start_time}:00`,
+              jamaat_time: `${(isCityWideSave
+                ? jamaatFromPreviousDay ?? r.jamaat_time
+                : r.jamaat_time)}:00`,
+            };
+          })
         );
 
         const { error } = await supabase
@@ -367,9 +413,20 @@ const PrayerTimesPage: React.FC = () => {
           setMessageType("error");
         } else {
           await loadPrayerTimes(selectedMasjidId, selectedDate);
-          setMessage(
-            `Prayer times saved for ${selectedTargetMasjidIds.length} masjid(s) in ${selectedMasjid?.city ?? "the selected city"}.`
-          );
+          const baseMessage = `Prayer times saved for ${selectedTargetMasjidIds.length} masjid(s) in ${selectedMasjid?.city ?? "the selected city"}.`;
+          if (isCityWideSave) {
+            if (missingPreviousDayJamaatCount === 0) {
+              setMessage(
+                `${baseMessage} Jamā‘ah stayed masjid-specific by taking each masjid's previous-day jamā‘ah time.`
+              );
+            } else {
+              setMessage(
+                `${baseMessage} Jamā‘ah used each masjid's previous-day time when available; ${missingPreviousDayJamaatCount} value(s) had no previous-day data and kept the currently entered jamā‘ah time.`
+              );
+            }
+          } else {
+            setMessage(baseMessage);
+          }
           setMessageType("success");
           setDirty(false);
           setLastSavedAt(
