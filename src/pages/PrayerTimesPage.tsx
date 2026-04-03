@@ -64,6 +64,7 @@ const PrayerTimesPage: React.FC = () => {
 
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [applyToCity, setApplyToCity] = useState(true);
 
   const selectedMasjid = useMemo(
     () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
@@ -269,19 +270,31 @@ const PrayerTimesPage: React.FC = () => {
 
   const handleSave = async () => {
     if (!selectedMasjidId || !selectedDate) return;
+    if (!selectedMasjid) return;
 
-    // validate: either both empty or both filled
+    // validate: jamaat without adhan is not valid
     for (const r of rows) {
-      if ((r.start_time && !r.jamaat_time) || (!r.start_time && r.jamaat_time)) {
+      if (!r.start_time && r.jamaat_time) {
         setMessage(
-          `For ${r.prayer.toUpperCase()} you must set both start and jamā‘ah, or leave both empty.`
+          `For ${r.prayer.toUpperCase()} you cannot set jamā‘ah without adhan.`
         );
         setMessageType("error");
         return;
       }
     }
 
-    const toSave = rows.filter((r) => r.start_time && r.jamaat_time);
+    // If jamaat is empty but adhan is set, default jamaat to adhan.
+    const normalizedRows = rows.map((r) => ({
+      ...r,
+      jamaat_time: r.jamaat_time || r.start_time,
+    }));
+    const toSave = normalizedRows.filter((r) => r.start_time && r.jamaat_time);
+
+    const targetMasjidIds = applyToCity
+      ? masjids
+          .filter((m) => m.city === selectedMasjid.city)
+          .map((m) => m.id)
+      : [selectedMasjidId];
 
     setSaving(true);
     setMessage(null);
@@ -290,18 +303,27 @@ const PrayerTimesPage: React.FC = () => {
     try {
       if (toSave.length === 0) {
         // If everything is cleared, delete rows for that day
-        const { error } = await supabase
+        let query = supabase
           .from("masjid_prayer_times")
           .delete()
-          .eq("masjid_id", selectedMasjidId)
           .eq("date", selectedDate);
+        if (applyToCity) {
+          query = query.in("masjid_id", targetMasjidIds);
+        } else {
+          query = query.eq("masjid_id", selectedMasjidId);
+        }
+        const { error } = await query;
 
         if (error) {
           console.error("Error deleting masjid_prayer_times", error);
           setMessage(error.message);
           setMessageType("error");
         } else {
-          setMessage("All prayer times cleared for this day.");
+          setMessage(
+            applyToCity
+              ? `All prayer times cleared for ${selectedMasjid.city} on this day.`
+              : "All prayer times cleared for this day."
+          );
           setMessageType("success");
           setRows(buildEmptyRows(selectedMasjidId, selectedDate));
           setDirty(false);
@@ -314,13 +336,15 @@ const PrayerTimesPage: React.FC = () => {
         }
       } else {
         // IMPORTANT: do NOT send 'id' at all, let Postgres bigserial generate it
-        const payload = toSave.map((r) => ({
-          masjid_id: r.masjid_id,
-          date: r.date,
-          prayer: r.prayer,
-          start_time: `${r.start_time}:00`,
-          jamaat_time: `${r.jamaat_time}:00`,
-        }));
+        const payload = targetMasjidIds.flatMap((masjidId) =>
+          toSave.map((r) => ({
+            masjid_id: masjidId,
+            date: r.date,
+            prayer: r.prayer,
+            start_time: `${r.start_time}:00`,
+            jamaat_time: `${r.jamaat_time}:00`,
+          }))
+        );
 
         const { error } = await supabase
           .from("masjid_prayer_times")
@@ -332,7 +356,11 @@ const PrayerTimesPage: React.FC = () => {
           setMessageType("error");
         } else {
           await loadPrayerTimes(selectedMasjidId, selectedDate);
-          setMessage("Prayer times saved for this day.");
+          setMessage(
+            applyToCity
+              ? `Prayer times saved for all masjids in ${selectedMasjid.city}.`
+              : "Prayer times saved for this day."
+          );
           setMessageType("success");
           setDirty(false);
           setLastSavedAt(
@@ -475,7 +503,16 @@ const PrayerTimesPage: React.FC = () => {
               "Select a masjid to start."
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-[11px] text-slate-300 border border-slate-700 bg-slate-900 rounded-full px-3 py-1.5">
+              <input
+                type="checkbox"
+                checked={applyToCity}
+                onChange={(e) => setApplyToCity(e.target.checked)}
+                className="accent-emerald-500"
+              />
+              Apply to all masjids in this city
+            </label>
             <button
               type="button"
               onClick={() => void handleCopyFromPreviousDay()}
@@ -502,56 +539,62 @@ const PrayerTimesPage: React.FC = () => {
             No prayers to show. Select a masjid and date.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
-            {rows.map((row) => {
-              const label = PRAYERS.find((p) => p.key === row.prayer)?.label;
-              return (
-                <div
-                  key={row.prayer}
-                  className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 flex flex-col gap-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-100 font-semibold">
-                      {label}
-                    </span>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wide">
-                      {row.prayer.toUpperCase()}
-                    </span>
-                  </div>
+          <>
+            <div className="text-[11px] text-slate-400">
+              Tip: if you enter only Adhan time, Jamā‘ah will automatically use
+              the same time when saving.
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
+              {rows.map((row) => {
+                const label = PRAYERS.find((p) => p.key === row.prayer)?.label;
+                return (
+                  <div
+                    key={row.prayer}
+                    className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 flex flex-col gap-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-100 font-semibold">
+                        {label}
+                      </span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wide">
+                        {row.prayer.toUpperCase()}
+                      </span>
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] text-slate-400">
-                      Start (adhan)
-                    </label>
-                    <input
-                      type="time"
-                      value={row.start_time}
-                      onChange={(e) =>
-                        updateRow(row.prayer, { start_time: e.target.value })
-                      }
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-                    />
-                  </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] text-slate-400">
+                        Start (adhan)
+                      </label>
+                      <input
+                        type="time"
+                        value={row.start_time}
+                        onChange={(e) =>
+                          updateRow(row.prayer, { start_time: e.target.value })
+                        }
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] text-slate-400">
-                      Jamā‘ah (iqamah)
-                    </label>
-                    <input
-                      type="time"
-                      value={row.jamaat_time}
-                      onChange={(e) =>
-                        updateRow(row.prayer, {
-                          jamaat_time: e.target.value,
-                        })
-                      }
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-                    />
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] text-slate-400">
+                        Jamā‘ah (iqamah)
+                      </label>
+                      <input
+                        type="time"
+                        value={row.jamaat_time}
+                        onChange={(e) =>
+                          updateRow(row.prayer, {
+                            jamaat_time: e.target.value,
+                          })
+                        }
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         <div className="pt-2 flex justify-end gap-2">
