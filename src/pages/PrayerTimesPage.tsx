@@ -55,7 +55,8 @@ const PrayerTimesPage: React.FC = () => {
   const [rows, setRows] = useState<PrayerRow[]>([]);
   const [loadingMasjids, setLoadingMasjids] = useState(false);
   const [loadingPrayers, setLoadingPrayers] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingAdhan, setSavingAdhan] = useState(false);
+  const [savingJamaat, setSavingJamaat] = useState(false);
 
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(
@@ -267,84 +268,105 @@ const PrayerTimesPage: React.FC = () => {
     setDirty(true);
   };
 
-  const handleSave = async () => {
+  const handleSavePart = async (part: "adhan" | "jamaat") => {
     if (!selectedMasjidId || !selectedDate) return;
 
-    // validate: either both empty or both filled
-    for (const r of rows) {
-      if ((r.start_time && !r.jamaat_time) || (!r.start_time && r.jamaat_time)) {
-        setMessage(
-          `For ${r.prayer.toUpperCase()} you must set both start and jamā‘ah, or leave both empty.`
-        );
-        setMessageType("error");
-        return;
-      }
-    }
-
-    const toSave = rows.filter((r) => r.start_time && r.jamaat_time);
-
-    setSaving(true);
+    if (part === "adhan") setSavingAdhan(true);
+    if (part === "jamaat") setSavingJamaat(true);
     setMessage(null);
     setMessageType(null);
 
     try {
-      if (toSave.length === 0) {
-        // If everything is cleared, delete rows for that day
-        const { error } = await supabase
-          .from("masjid_prayer_times")
-          .delete()
-          .eq("masjid_id", selectedMasjidId)
-          .eq("date", selectedDate);
+      const { data: existingData, error: existingError } = await supabase
+        .from("masjid_prayer_times")
+        .select("prayer, start_time, jamaat_time")
+        .eq("masjid_id", selectedMasjidId)
+        .eq("date", selectedDate);
 
-        if (error) {
-          console.error("Error deleting masjid_prayer_times", error);
-          setMessage(error.message);
-          setMessageType("error");
-        } else {
-          setMessage("All prayer times cleared for this day.");
-          setMessageType("success");
-          setRows(buildEmptyRows(selectedMasjidId, selectedDate));
-          setDirty(false);
-          setLastSavedAt(
-            new Date().toLocaleTimeString("it-IT", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          );
-        }
+      if (existingError) {
+        console.error("Error loading existing prayer rows", existingError);
+        setMessage(existingError.message);
+        setMessageType("error");
+        return;
+      }
+
+      const existingMap = new Map<
+        PrayerKey,
+        { start_time: string; jamaat_time: string }
+      >();
+      (existingData as PrayerTimeDbRow[] | null)?.forEach((r) => {
+        existingMap.set(r.prayer, {
+          start_time: r.start_time.slice(0, 5),
+          jamaat_time: r.jamaat_time.slice(0, 5),
+        });
+      });
+
+      const skipped: PrayerKey[] = [];
+      const payload = rows
+        .map((r) => {
+          if (part === "adhan" && !r.start_time) return null;
+          if (part === "jamaat" && !r.jamaat_time) return null;
+
+          const existing = existingMap.get(r.prayer);
+          const startValue =
+            part === "adhan"
+              ? r.start_time
+              : r.start_time || existing?.start_time || "";
+          const jamaatValue =
+            part === "jamaat"
+              ? r.jamaat_time
+              : r.jamaat_time || existing?.jamaat_time || "";
+
+          if (!startValue || !jamaatValue) {
+            skipped.push(r.prayer);
+            return null;
+          }
+
+          return {
+            masjid_id: r.masjid_id,
+            date: r.date,
+            prayer: r.prayer,
+            start_time: `${startValue}:00`,
+            jamaat_time: `${jamaatValue}:00`,
+          };
+        })
+        .filter(Boolean);
+
+      if (payload.length === 0) {
+        setMessage(
+          `No ${part} times to save yet. Fill at least one valid prayer row first.`
+        );
+        setMessageType("error");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("masjid_prayer_times")
+        .upsert(payload, { onConflict: "masjid_id,date,prayer" });
+
+      if (error) {
+        console.error("Error upserting masjid_prayer_times", error);
+        setMessage(error.message);
+        setMessageType("error");
       } else {
-        // IMPORTANT: do NOT send 'id' at all, let Postgres bigserial generate it
-        const payload = toSave.map((r) => ({
-          masjid_id: r.masjid_id,
-          date: r.date,
-          prayer: r.prayer,
-          start_time: `${r.start_time}:00`,
-          jamaat_time: `${r.jamaat_time}:00`,
-        }));
-
-        const { error } = await supabase
-          .from("masjid_prayer_times")
-          .upsert(payload, { onConflict: "masjid_id,date,prayer" });
-
-        if (error) {
-          console.error("Error upserting masjid_prayer_times", error);
-          setMessage(error.message);
-          setMessageType("error");
-        } else {
-          await loadPrayerTimes(selectedMasjidId, selectedDate);
-          setMessage("Prayer times saved for this day.");
-          setMessageType("success");
-          setDirty(false);
-          setLastSavedAt(
-            new Date().toLocaleTimeString("it-IT", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          );
-        }
+        await loadPrayerTimes(selectedMasjidId, selectedDate);
+        setMessage(
+          skipped.length > 0
+            ? `${part === "adhan" ? "Adhan" : "Jamā‘ah"} saved. Skipped ${skipped.length} prayer(s) because the other time is missing.`
+            : `${part === "adhan" ? "Adhan" : "Jamā‘ah"} times saved successfully.`
+        );
+        setMessageType("success");
+        setDirty(false);
+        setLastSavedAt(
+          new Date().toLocaleTimeString("it-IT", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        );
       }
     } finally {
-      setSaving(false);
+      if (part === "adhan") setSavingAdhan(false);
+      if (part === "jamaat") setSavingJamaat(false);
     }
   };
 
@@ -557,11 +579,19 @@ const PrayerTimesPage: React.FC = () => {
         <div className="pt-2 flex justify-end gap-2">
           <button
             type="button"
-            onClick={handleSave}
-            disabled={saving || !selectedMasjidId}
+            onClick={() => void handleSavePart("adhan")}
+            disabled={savingAdhan || savingJamaat || !selectedMasjidId}
+            className="px-4 py-2 rounded-lg bg-sky-500 text-sky-950 text-xs font-semibold disabled:opacity-60"
+          >
+            {savingAdhan ? "Saving Adhan…" : "Save Adhan"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSavePart("jamaat")}
+            disabled={savingAdhan || savingJamaat || !selectedMasjidId}
             className="px-4 py-2 rounded-lg bg-emerald-500 text-emerald-950 text-xs font-semibold disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save prayer times"}
+            {savingJamaat ? "Saving Jamā‘ah…" : "Save Jamā‘ah"}
           </button>
         </div>
       </div>
