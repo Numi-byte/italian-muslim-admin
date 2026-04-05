@@ -24,8 +24,8 @@ type PrayerTimeDbRow = {
   masjid_id: string;
   date: string;
   prayer: PrayerKey;
-  start_time: string | null; // "HH:MM:SS"
-  jamaat_time: string | null; // "HH:MM:SS"
+  start_time: string; // "HH:MM:SS"
+  jamaat_time: string; // "HH:MM:SS"
 };
 
 const PRAYERS: { key: PrayerKey; label: string }[] = [
@@ -55,9 +55,7 @@ const PrayerTimesPage: React.FC = () => {
   const [rows, setRows] = useState<PrayerRow[]>([]);
   const [loadingMasjids, setLoadingMasjids] = useState(false);
   const [loadingPrayers, setLoadingPrayers] = useState(false);
-  const [savingType, setSavingType] = useState<"adhan" | "jamaat" | null>(
-    null
-  );
+  const [saving, setSaving] = useState(false);
 
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(
@@ -147,8 +145,8 @@ const PrayerTimesPage: React.FC = () => {
           masjid_id: row.masjid_id,
           date: row.date,
           prayer: row.prayer,
-          start_time: row.start_time ? row.start_time.slice(0, 5) : "",
-          jamaat_time: row.jamaat_time ? row.jamaat_time.slice(0, 5) : "",
+          start_time: row.start_time.slice(0, 5), // HH:MM:SS -> HH:MM
+          jamaat_time: row.jamaat_time.slice(0, 5),
         });
       }
 
@@ -218,8 +216,8 @@ const PrayerTimesPage: React.FC = () => {
 
     for (const row of existing) {
       map.set(row.prayer, {
-        start: row.start_time ? row.start_time.slice(0, 5) : "",
-        jamaat: row.jamaat_time ? row.jamaat_time.slice(0, 5) : "",
+        start: row.start_time.slice(0, 5),
+        jamaat: row.jamaat_time.slice(0, 5),
       });
     }
 
@@ -269,46 +267,84 @@ const PrayerTimesPage: React.FC = () => {
     setDirty(true);
   };
 
-  const handleSaveColumn = async (column: "start_time" | "jamaat_time") => {
+  const handleSave = async () => {
     if (!selectedMasjidId || !selectedDate) return;
 
-    const processType = column === "start_time" ? "adhan" : "jamaat";
-    const label = column === "start_time" ? "Adhan" : "Jamā‘ah";
+    // validate: either both empty or both filled
+    for (const r of rows) {
+      if ((r.start_time && !r.jamaat_time) || (!r.start_time && r.jamaat_time)) {
+        setMessage(
+          `For ${r.prayer.toUpperCase()} you must set both start and jamā‘ah, or leave both empty.`
+        );
+        setMessageType("error");
+        return;
+      }
+    }
 
-    setSavingType(processType);
+    const toSave = rows.filter((r) => r.start_time && r.jamaat_time);
+
+    setSaving(true);
     setMessage(null);
     setMessageType(null);
 
     try {
-      const payload = rows.map((r) => ({
-        masjid_id: r.masjid_id,
-        date: r.date,
-        prayer: r.prayer,
-        [column]: r[column] ? `${r[column]}:00` : null,
-      }));
+      if (toSave.length === 0) {
+        // If everything is cleared, delete rows for that day
+        const { error } = await supabase
+          .from("masjid_prayer_times")
+          .delete()
+          .eq("masjid_id", selectedMasjidId)
+          .eq("date", selectedDate);
 
-      const { error } = await supabase
-        .from("masjid_prayer_times")
-        .upsert(payload, { onConflict: "masjid_id,date,prayer" });
-
-      if (error) {
-        console.error(`Error upserting ${column} in masjid_prayer_times`, error);
-        setMessage(error.message);
-        setMessageType("error");
+        if (error) {
+          console.error("Error deleting masjid_prayer_times", error);
+          setMessage(error.message);
+          setMessageType("error");
+        } else {
+          setMessage("All prayer times cleared for this day.");
+          setMessageType("success");
+          setRows(buildEmptyRows(selectedMasjidId, selectedDate));
+          setDirty(false);
+          setLastSavedAt(
+            new Date().toLocaleTimeString("it-IT", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          );
+        }
       } else {
-        await loadPrayerTimes(selectedMasjidId, selectedDate);
-        setMessage(`${label} times saved for this day.`);
-        setMessageType("success");
-        setDirty(false);
-        setLastSavedAt(
-          new Date().toLocaleTimeString("it-IT", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        );
+        // IMPORTANT: do NOT send 'id' at all, let Postgres bigserial generate it
+        const payload = toSave.map((r) => ({
+          masjid_id: r.masjid_id,
+          date: r.date,
+          prayer: r.prayer,
+          start_time: `${r.start_time}:00`,
+          jamaat_time: `${r.jamaat_time}:00`,
+        }));
+
+        const { error } = await supabase
+          .from("masjid_prayer_times")
+          .upsert(payload, { onConflict: "masjid_id,date,prayer" });
+
+        if (error) {
+          console.error("Error upserting masjid_prayer_times", error);
+          setMessage(error.message);
+          setMessageType("error");
+        } else {
+          await loadPrayerTimes(selectedMasjidId, selectedDate);
+          setMessage("Prayer times saved for this day.");
+          setMessageType("success");
+          setDirty(false);
+          setLastSavedAt(
+            new Date().toLocaleTimeString("it-IT", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          );
+        }
       }
     } finally {
-      setSavingType(null);
+      setSaving(false);
     }
   };
 
@@ -521,19 +557,11 @@ const PrayerTimesPage: React.FC = () => {
         <div className="pt-2 flex justify-end gap-2">
           <button
             type="button"
-            onClick={() => void handleSaveColumn("start_time")}
-            disabled={savingType !== null || !selectedMasjidId}
-            className="px-4 py-2 rounded-lg border border-emerald-400/70 text-emerald-200 text-xs font-semibold hover:bg-emerald-500/10 disabled:opacity-60"
-          >
-            {savingType === "adhan" ? "Saving Adhan…" : "Save Adhan times"}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSaveColumn("jamaat_time")}
-            disabled={savingType !== null || !selectedMasjidId}
+            onClick={handleSave}
+            disabled={saving || !selectedMasjidId}
             className="px-4 py-2 rounded-lg bg-emerald-500 text-emerald-950 text-xs font-semibold disabled:opacity-60"
           >
-            {savingType === "jamaat" ? "Saving Jamā‘ah…" : "Save Jamā‘ah times"}
+            {saving ? "Saving…" : "Save prayer times"}
           </button>
         </div>
       </div>
