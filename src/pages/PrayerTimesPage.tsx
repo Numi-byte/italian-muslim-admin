@@ -57,6 +57,7 @@ const PrayerTimesPage: React.FC = () => {
   const [loadingPrayers, setLoadingPrayers] = useState(false);
   const [savingAdhan, setSavingAdhan] = useState(false);
   const [savingJamaat, setSavingJamaat] = useState(false);
+  const [applyingCityAdhan, setApplyingCityAdhan] = useState(false);
 
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(
@@ -65,11 +66,25 @@ const PrayerTimesPage: React.FC = () => {
 
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [selectedCityMasjidIds, setSelectedCityMasjidIds] = useState<string[]>(
+    []
+  );
 
   const selectedMasjid = useMemo(
     () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
     [masjids, selectedMasjidId]
   );
+
+  const sameCityMasjids = useMemo(() => {
+    if (!selectedMasjid) return [];
+    return masjids.filter(
+      (m) => m.city === selectedMasjid.city && m.id !== selectedMasjid.id
+    );
+  }, [masjids, selectedMasjid]);
+
+  useEffect(() => {
+    setSelectedCityMasjidIds([]);
+  }, [selectedMasjidId, selectedDate]);
 
   // ---------------------------------------------------------------------------
   // Load masjids
@@ -348,6 +363,59 @@ const PrayerTimesPage: React.FC = () => {
     }
   };
 
+  const handleToggleCityMasjid = (masjidId: string) => {
+    setSelectedCityMasjidIds((prev) =>
+      prev.includes(masjidId)
+        ? prev.filter((id) => id !== masjidId)
+        : [...prev, masjidId]
+    );
+  };
+
+  const handleApplyAdhanToSameCity = async () => {
+    if (!selectedDate || selectedCityMasjidIds.length === 0) return;
+
+    const adhanRows = rows.filter((r) => r.start_time);
+    if (adhanRows.length === 0) {
+      setMessage("Set at least one adhan start time before applying to a city.");
+      setMessageType("error");
+      return;
+    }
+
+    const payload = selectedCityMasjidIds.flatMap((masjidId) =>
+      adhanRows.map((row) => ({
+        masjid_id: masjidId,
+        date: selectedDate,
+        prayer: row.prayer,
+        start_time: `${row.start_time}:00`,
+      }))
+    );
+
+    setApplyingCityAdhan(true);
+    setMessage(null);
+    setMessageType(null);
+
+    const { error } = await supabase.from("masjid_prayer_times").upsert(
+      payload,
+      {
+        onConflict: "masjid_id,date,prayer",
+      }
+    );
+
+    setApplyingCityAdhan(false);
+
+    if (error) {
+      console.error("Error applying adhan times to same-city masjids", error);
+      setMessage(error.message);
+      setMessageType("error");
+      return;
+    }
+
+    setMessage(
+      `Adhan times applied to ${selectedCityMasjidIds.length} selected masjid(s) in ${selectedMasjid?.city}.`
+    );
+    setMessageType("success");
+  };
+
   // ---------------------------------------------------------------------------
   // UI
   // ---------------------------------------------------------------------------
@@ -502,6 +570,77 @@ const PrayerTimesPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {selectedMasjid && sameCityMasjids.length > 0 && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 space-y-3">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold text-slate-100">
+                Apply adhan times to other masjids in {selectedMasjid.city}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                This copies only <span className="text-slate-200">Start (adhan)</span>{" "}
+                times for this date. Jamā‘ah times are not changed.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {sameCityMasjids.map((masjid) => {
+                const checked = selectedCityMasjidIds.includes(masjid.id);
+                return (
+                  <label
+                    key={masjid.id}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] cursor-pointer ${
+                      checked
+                        ? "border-sky-400/70 bg-sky-500/15 text-sky-100"
+                        : "border-slate-700 bg-slate-900 text-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => handleToggleCityMasjid(masjid.id)}
+                      className="accent-sky-500"
+                    />
+                    {masjid.official_name}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedCityMasjidIds((prev) =>
+                    prev.length === sameCityMasjids.length
+                      ? []
+                      : sameCityMasjids.map((m) => m.id)
+                  )
+                }
+                className="text-[11px] px-2.5 py-1 rounded-md border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                {selectedCityMasjidIds.length === sameCityMasjids.length
+                  ? "Unselect all"
+                  : "Select all"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleApplyAdhanToSameCity()}
+                disabled={
+                  applyingCityAdhan ||
+                  selectedCityMasjidIds.length === 0 ||
+                  !selectedDate
+                }
+                className="text-[11px] px-3 py-1.5 rounded-full border border-sky-500/70 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
+              >
+                {applyingCityAdhan
+                  ? "Applying adhan…"
+                  : "Apply adhan to selected masjids"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {loadingPrayers ? (
           <div className="text-xs text-slate-400">Loading prayer times…</div>
