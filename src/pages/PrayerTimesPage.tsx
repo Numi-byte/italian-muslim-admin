@@ -192,7 +192,7 @@ const PrayerTimesPage: React.FC = () => {
     setDirty(true);
   };
 
-  const handleCopyFromPreviousDay = async () => {
+  const handleCopyFromPreviousDay = async (mode: "both" | "jamaat") => {
     if (!selectedMasjidId || !selectedDate) return;
 
     const current = new Date(selectedDate);
@@ -228,13 +228,15 @@ const PrayerTimesPage: React.FC = () => {
         if (!fromPrev) return r;
         return {
           ...r,
-          start_time: fromPrev.start,
+          start_time: mode === "both" ? fromPrev.start : r.start_time,
           jamaat_time: fromPrev.jamaat,
         };
       })
     );
     setMessage(
-      `Copied times from ${prevIso} into the current day (not yet saved).`
+      mode === "both"
+        ? `Copied adhan and jamā‘ah times from ${prevIso} into the current day (not yet saved).`
+        : `Copied jamā‘ah times from ${prevIso} into the current day (not yet saved).`
     );
     setMessageType("success");
     setDirty(true);
@@ -476,11 +478,19 @@ const PrayerTimesPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => void handleCopyFromPreviousDay()}
+              onClick={() => void handleCopyFromPreviousDay("both")}
               disabled={!selectedMasjidId || !selectedDate || loadingPrayers}
               className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800 disabled:opacity-50"
             >
               Copy from previous day
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCopyFromPreviousDay("jamaat")}
+              disabled={!selectedMasjidId || !selectedDate || loadingPrayers}
+              className="text-[11px] px-3 py-1.5 rounded-full border border-emerald-500/70 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+            >
+              Copy jamā‘ah only
             </button>
             <button
               type="button"
