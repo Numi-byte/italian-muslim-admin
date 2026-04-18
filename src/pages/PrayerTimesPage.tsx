@@ -381,7 +381,11 @@ const PrayerTimesPage: React.FC = () => {
               [field]: `${r[field]}:00`,
               ...(r.prayer === "asr"
                 ? buildAsrTimingPayload(r)
-                : {}),
+                : {
+                    start_time: r.start_time ? `${r.start_time}:00` : null,
+                    asr_start_time_shafi: null,
+                    asr_start_time_hanafi: null,
+                  }),
             }));
 
     setSaving(true);
