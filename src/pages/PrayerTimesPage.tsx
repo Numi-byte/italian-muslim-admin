@@ -16,6 +16,8 @@ type PrayerRow = {
   date: string; // YYYY-MM-DD
   prayer: PrayerKey;
   start_time: string; // HH:MM
+  asr_start_time_shafi: string; // HH:MM
+  asr_start_time_hanafi: string; // HH:MM
   jamaat_time: string; // HH:MM
 };
 
@@ -25,6 +27,8 @@ type PrayerTimeDbRow = {
   date: string;
   prayer: PrayerKey;
   start_time: string | null; // "HH:MM:SS"
+  asr_start_time_shafi: string | null; // "HH:MM:SS"
+  asr_start_time_hanafi: string | null; // "HH:MM:SS"
   jamaat_time: string | null; // "HH:MM:SS"
 };
 
@@ -127,6 +131,8 @@ const PrayerTimesPage: React.FC = () => {
       date,
       prayer: p.key,
       start_time: "",
+      asr_start_time_shafi: "",
+      asr_start_time_hanafi: "",
       jamaat_time: "",
     }));
 
@@ -161,7 +167,15 @@ const PrayerTimesPage: React.FC = () => {
           masjid_id: row.masjid_id,
           date: row.date,
           prayer: row.prayer,
-          start_time: row.start_time?.slice(0, 5) ?? "", // HH:MM:SS -> HH:MM
+          start_time:
+            row.prayer === "asr"
+              ? row.start_time?.slice(0, 5) ??
+                row.asr_start_time_shafi?.slice(0, 5) ??
+                row.asr_start_time_hanafi?.slice(0, 5) ??
+                ""
+              : row.start_time?.slice(0, 5) ?? "", // HH:MM:SS -> HH:MM
+          asr_start_time_shafi: row.asr_start_time_shafi?.slice(0, 5) ?? "",
+          asr_start_time_hanafi: row.asr_start_time_hanafi?.slice(0, 5) ?? "",
           jamaat_time: row.jamaat_time?.slice(0, 5) ?? "",
         });
       }
@@ -175,6 +189,8 @@ const PrayerTimesPage: React.FC = () => {
           date,
           prayer: p.key,
           start_time: "",
+          asr_start_time_shafi: "",
+          asr_start_time_hanafi: "",
           jamaat_time: "",
         };
       });
@@ -197,7 +213,15 @@ const PrayerTimesPage: React.FC = () => {
 
   const updateRow = (
     prayerKey: PrayerKey,
-    patch: Partial<Pick<PrayerRow, "start_time" | "jamaat_time">>
+    patch: Partial<
+      Pick<
+        PrayerRow,
+        | "start_time"
+        | "asr_start_time_shafi"
+        | "asr_start_time_hanafi"
+        | "jamaat_time"
+      >
+    >
   ) => {
     setRows((prev) =>
       prev.map((r) => (r.prayer === prayerKey ? { ...r, ...patch } : r))
@@ -228,11 +252,16 @@ const PrayerTimesPage: React.FC = () => {
     }
 
     const existing = data as PrayerTimeDbRow[];
-    const map = new Map<PrayerKey, { start: string; jamaat: string }>();
+    const map = new Map<
+      PrayerKey,
+      { start: string; asrShafi: string; asrHanafi: string; jamaat: string }
+    >();
 
     for (const row of existing) {
       map.set(row.prayer, {
         start: row.start_time?.slice(0, 5) ?? "",
+        asrShafi: row.asr_start_time_shafi?.slice(0, 5) ?? "",
+        asrHanafi: row.asr_start_time_hanafi?.slice(0, 5) ?? "",
         jamaat: row.jamaat_time?.slice(0, 5) ?? "",
       });
     }
@@ -244,6 +273,10 @@ const PrayerTimesPage: React.FC = () => {
         return {
           ...r,
           start_time: mode === "both" ? fromPrev.start : r.start_time,
+          asr_start_time_shafi:
+            mode === "both" ? fromPrev.asrShafi : r.asr_start_time_shafi,
+          asr_start_time_hanafi:
+            mode === "both" ? fromPrev.asrHanafi : r.asr_start_time_hanafi,
           jamaat_time: fromPrev.jamaat,
         };
       })
@@ -292,14 +325,39 @@ const PrayerTimesPage: React.FC = () => {
   ) => {
     if (!selectedMasjidId || !selectedDate) return;
 
-    const toSave = rows
-      .filter((r) => r[field])
-      .map((r) => ({
-        masjid_id: r.masjid_id,
-        date: r.date,
-        prayer: r.prayer,
-        [field]: `${r[field]}:00`,
-      }));
+    const toSave =
+      field === "start_time"
+        ? rows
+            .filter((r) =>
+              r.prayer === "asr"
+                ? Boolean(r.asr_start_time_shafi || r.asr_start_time_hanafi)
+                : Boolean(r.start_time)
+            )
+            .map((r) => ({
+              masjid_id: r.masjid_id,
+              date: r.date,
+              prayer: r.prayer,
+              start_time:
+                r.prayer === "asr"
+                  ? `${
+                      r.asr_start_time_shafi || r.asr_start_time_hanafi || ""
+                    }:00`
+                  : `${r.start_time}:00`,
+              asr_start_time_shafi: r.asr_start_time_shafi
+                ? `${r.asr_start_time_shafi}:00`
+                : null,
+              asr_start_time_hanafi: r.asr_start_time_hanafi
+                ? `${r.asr_start_time_hanafi}:00`
+                : null,
+            }))
+        : rows
+            .filter((r) => Boolean(r[field]))
+            .map((r) => ({
+              masjid_id: r.masjid_id,
+              date: r.date,
+              prayer: r.prayer,
+              [field]: `${r[field]}:00`,
+            }));
 
     setSaving(true);
     setMessage(null);
@@ -309,7 +367,15 @@ const PrayerTimesPage: React.FC = () => {
       if (toSave.length === 0) {
         const { error } = await supabase
           .from("masjid_prayer_times")
-          .update({ [field]: null })
+          .update(
+            field === "start_time"
+              ? {
+                  start_time: null,
+                  asr_start_time_shafi: null,
+                  asr_start_time_hanafi: null,
+                }
+              : { [field]: null }
+          )
           .eq("masjid_id", selectedMasjidId)
           .eq("date", selectedDate);
 
@@ -324,6 +390,12 @@ const PrayerTimesPage: React.FC = () => {
             prev.map((r) => ({
               ...r,
               [field]: "",
+              ...(field === "start_time"
+                ? {
+                    asr_start_time_shafi: "",
+                    asr_start_time_hanafi: "",
+                  }
+                : {}),
             }))
           );
           setDirty(false);
@@ -374,7 +446,12 @@ const PrayerTimesPage: React.FC = () => {
   const handleApplyAdhanToSameCity = async () => {
     if (!selectedDate || selectedCityMasjidIds.length === 0) return;
 
-    const adhanRows = rows.filter((r) => r.start_time);
+    const adhanRows = rows.filter(
+      (r) =>
+        (r.prayer === "asr" &&
+          (r.asr_start_time_shafi || r.asr_start_time_hanafi)) ||
+        (r.prayer !== "asr" && r.start_time)
+    );
     if (adhanRows.length === 0) {
       setMessage("Set at least one adhan start time before applying to a city.");
       setMessageType("error");
@@ -386,7 +463,18 @@ const PrayerTimesPage: React.FC = () => {
         masjid_id: masjidId,
         date: selectedDate,
         prayer: row.prayer,
-        start_time: `${row.start_time}:00`,
+        start_time:
+          row.prayer === "asr"
+            ? `${
+                row.asr_start_time_shafi || row.asr_start_time_hanafi || ""
+              }:00`
+            : `${row.start_time}:00`,
+        asr_start_time_shafi: row.asr_start_time_shafi
+          ? `${row.asr_start_time_shafi}:00`
+          : null,
+        asr_start_time_hanafi: row.asr_start_time_hanafi
+          ? `${row.asr_start_time_hanafi}:00`
+          : null,
       }))
     );
 
@@ -666,19 +754,54 @@ const PrayerTimesPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] text-slate-400">
-                      Start (adhan)
-                    </label>
-                    <input
-                      type="time"
-                      value={row.start_time}
-                      onChange={(e) =>
-                        updateRow(row.prayer, { start_time: e.target.value })
-                      }
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-                    />
-                  </div>
+                  {row.prayer === "asr" ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] text-slate-400">
+                          Start (adhan) — Shafi
+                        </label>
+                        <input
+                          type="time"
+                          value={row.asr_start_time_shafi}
+                          onChange={(e) =>
+                            updateRow(row.prayer, {
+                              asr_start_time_shafi: e.target.value,
+                            })
+                          }
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] text-slate-400">
+                          Start (adhan) — Hanafi
+                        </label>
+                        <input
+                          type="time"
+                          value={row.asr_start_time_hanafi}
+                          onChange={(e) =>
+                            updateRow(row.prayer, {
+                              asr_start_time_hanafi: e.target.value,
+                            })
+                          }
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] text-slate-400">
+                        Start (adhan)
+                      </label>
+                      <input
+                        type="time"
+                        value={row.start_time}
+                        onChange={(e) =>
+                          updateRow(row.prayer, { start_time: e.target.value })
+                        }
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
                     <label className="block text-[11px] text-slate-400">
