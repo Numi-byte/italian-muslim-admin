@@ -231,6 +231,28 @@ const PrayerTimesPage: React.FC = () => {
     setDirty(true);
   };
 
+  const buildAsrTimingPayload = (
+    row: Pick<
+      PrayerRow,
+      "start_time" | "asr_start_time_shafi" | "asr_start_time_hanafi"
+    >
+  ) => ({
+    start_time:
+      row.asr_start_time_shafi || row.asr_start_time_hanafi || row.start_time
+        ? `${
+            row.asr_start_time_shafi ||
+            row.asr_start_time_hanafi ||
+            row.start_time
+          }:00`
+        : null,
+    asr_start_time_shafi: row.asr_start_time_shafi
+      ? `${row.asr_start_time_shafi}:00`
+      : null,
+    asr_start_time_hanafi: row.asr_start_time_hanafi
+      ? `${row.asr_start_time_hanafi}:00`
+      : null,
+  });
+
   const handleCopyFromPreviousDay = async (mode: "both" | "jamaat") => {
     if (!selectedMasjidId || !selectedDate) return;
 
@@ -357,6 +379,9 @@ const PrayerTimesPage: React.FC = () => {
               date: r.date,
               prayer: r.prayer,
               [field]: `${r[field]}:00`,
+              ...(r.prayer === "asr"
+                ? buildAsrTimingPayload(r)
+                : {}),
             }));
 
     setSaving(true);
@@ -463,18 +488,13 @@ const PrayerTimesPage: React.FC = () => {
         masjid_id: masjidId,
         date: selectedDate,
         prayer: row.prayer,
-        start_time:
-          row.prayer === "asr"
-            ? `${
-                row.asr_start_time_shafi || row.asr_start_time_hanafi || ""
-              }:00`
-            : `${row.start_time}:00`,
-        asr_start_time_shafi: row.asr_start_time_shafi
-          ? `${row.asr_start_time_shafi}:00`
-          : null,
-        asr_start_time_hanafi: row.asr_start_time_hanafi
-          ? `${row.asr_start_time_hanafi}:00`
-          : null,
+        ...(row.prayer === "asr"
+          ? buildAsrTimingPayload(row)
+          : {
+              start_time: `${row.start_time}:00`,
+              asr_start_time_shafi: null,
+              asr_start_time_hanafi: null,
+            }),
       }))
     );
 
