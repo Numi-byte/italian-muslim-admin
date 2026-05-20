@@ -253,7 +253,7 @@ const AdminLayout: React.FC = () => {
               {tab === "prayers" && "Daily prayer times"}
               {tab === "jumuah" && "Jumuʿah timings & Friday slots"}
               {tab === "announcements" && "Masjid announcements"}
-              {tab === "analytics" && "Users & onboarding insights"}
+              {tab === "analytics" && "Live analytics dashboard"}
             </h1>
             <p className="text-xs text-slate-400">
               {tab === "masjids" &&
@@ -269,7 +269,7 @@ const AdminLayout: React.FC = () => {
               {tab === "announcements" &&
                 "Publish official announcements for each masjid: Jumuʿah, events, Ramadan and urgent alerts."}
               {tab === "analytics" &&
-                "See who is using the app: masjid distribution, gender and age bands, and notification opt-in rates."}
+                "Track installations, active usage, retention, frequency, and page time for the mobile app."}
             </p>
           </div>
 

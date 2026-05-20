@@ -1,5 +1,5 @@
 // src/auth/AuthProvider.tsx
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "../lib/supabaseClient";
@@ -13,32 +13,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const authRequestId = useRef(0);
+  const isMountedRef = useRef(false);
+
+  const applySession = useCallback(async (nextSession: Session | null) => {
+    const requestId = authRequestId.current + 1;
+    authRequestId.current = requestId;
+
+    if (!isMountedRef.current) return;
+    setLoading(true);
+
+    const nextUser = nextSession?.user ?? null;
+    setSession(nextSession);
+    setUser(nextUser);
+
+    if (!nextUser) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const nextProfile = await loadProfile(nextUser.id);
+      if (isMountedRef.current && authRequestId.current === requestId) {
+        setProfile(nextProfile);
+      }
+    } catch (e) {
+      console.error("[Auth] loadProfile error:", e);
+      if (isMountedRef.current && authRequestId.current === requestId) {
+        setProfile({ id: nextUser.id, role: null });
+      }
+    } finally {
+      if (isMountedRef.current && authRequestId.current === requestId) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
+    isMountedRef.current = true;
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, nextSession) => {
+      (_event, nextSession) => {
         if (!isMounted) return;
         console.log("[Auth] onAuthStateChange:", _event);
-
-        const s = nextSession ?? null;
-        const u = s?.user ?? null;
-
-        setSession(s);
-        setUser(u);
-
-        if (u) {
-          try {
-            const p = await loadProfile(u.id);
-            if (isMounted) setProfile(p);
-          } catch (e) {
-            console.error("[Auth] loadProfile error (listener):", e);
-            if (isMounted) setProfile({ id: u.id, role: null });
-          }
-        } else {
-          setProfile(null);
-        }
+        window.setTimeout(() => {
+          if (isMountedRef.current) void applySession(nextSession ?? null);
+        }, 0);
       }
     );
 
@@ -49,32 +71,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (error) console.error("[Auth] getSession error:", error);
 
         if (!isMounted) return;
-        const s = data?.session ?? null;
-        const u = s?.user ?? null;
-        setSession(s);
-        setUser(u);
-
-        if (u) {
-          try {
-            const p = await loadProfile(u.id);
-            if (isMounted) setProfile(p);
-          } catch (e) {
-            console.error("[Auth] loadProfile error (init):", e);
-            if (isMounted) setProfile({ id: u.id, role: null });
-          }
-        }
+        await applySession(data?.session ?? null);
       } catch (e) {
         console.error("[Auth] unexpected getSession error:", e);
-      } finally {
         if (isMounted) setLoading(false);
+      } finally {
+        if (isMounted && authRequestId.current === 0) setLoading(false);
       }
     })();
 
     return () => {
       isMounted = false;
+      isMountedRef.current = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [applySession]);
 
   const signIn: AuthContextValue["signIn"] = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({
