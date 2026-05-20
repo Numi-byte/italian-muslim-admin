@@ -16,6 +16,8 @@ type PrayerRow = {
   date: string; // YYYY-MM-DD
   prayer: PrayerKey;
   start_time: string; // HH:MM
+  asr_start_time_shafi: string; // HH:MM
+  asr_start_time_hanafi: string; // HH:MM
   jamaat_time: string; // HH:MM
 };
 
@@ -24,8 +26,10 @@ type PrayerTimeDbRow = {
   masjid_id: string;
   date: string;
   prayer: PrayerKey;
-  start_time: string; // "HH:MM:SS"
-  jamaat_time: string; // "HH:MM:SS"
+  start_time: string | null; // "HH:MM:SS"
+  asr_start_time_shafi: string | null; // "HH:MM:SS"
+  asr_start_time_hanafi: string | null; // "HH:MM:SS"
+  jamaat_time: string | null; // "HH:MM:SS"
 };
 
 const PRAYERS: { key: PrayerKey; label: string }[] = [
@@ -55,7 +59,9 @@ const PrayerTimesPage: React.FC = () => {
   const [rows, setRows] = useState<PrayerRow[]>([]);
   const [loadingMasjids, setLoadingMasjids] = useState(false);
   const [loadingPrayers, setLoadingPrayers] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingAdhan, setSavingAdhan] = useState(false);
+  const [savingJamaat, setSavingJamaat] = useState(false);
+  const [applyingCityAdhan, setApplyingCityAdhan] = useState(false);
 
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(
@@ -64,11 +70,25 @@ const PrayerTimesPage: React.FC = () => {
 
   const [dirty, setDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [selectedCityMasjidIds, setSelectedCityMasjidIds] = useState<string[]>(
+    []
+  );
 
   const selectedMasjid = useMemo(
     () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
     [masjids, selectedMasjidId]
   );
+
+  const sameCityMasjids = useMemo(() => {
+    if (!selectedMasjid) return [];
+    return masjids.filter(
+      (m) => m.city === selectedMasjid.city && m.id !== selectedMasjid.id
+    );
+  }, [masjids, selectedMasjid]);
+
+  useEffect(() => {
+    setSelectedCityMasjidIds([]);
+  }, [selectedMasjidId, selectedDate]);
 
   // ---------------------------------------------------------------------------
   // Load masjids
@@ -111,6 +131,8 @@ const PrayerTimesPage: React.FC = () => {
       date,
       prayer: p.key,
       start_time: "",
+      asr_start_time_shafi: "",
+      asr_start_time_hanafi: "",
       jamaat_time: "",
     }));
 
@@ -145,8 +167,16 @@ const PrayerTimesPage: React.FC = () => {
           masjid_id: row.masjid_id,
           date: row.date,
           prayer: row.prayer,
-          start_time: row.start_time.slice(0, 5), // HH:MM:SS -> HH:MM
-          jamaat_time: row.jamaat_time.slice(0, 5),
+          start_time:
+            row.prayer === "asr"
+              ? row.start_time?.slice(0, 5) ??
+                row.asr_start_time_shafi?.slice(0, 5) ??
+                row.asr_start_time_hanafi?.slice(0, 5) ??
+                ""
+              : row.start_time?.slice(0, 5) ?? "", // HH:MM:SS -> HH:MM
+          asr_start_time_shafi: row.asr_start_time_shafi?.slice(0, 5) ?? "",
+          asr_start_time_hanafi: row.asr_start_time_hanafi?.slice(0, 5) ?? "",
+          jamaat_time: row.jamaat_time?.slice(0, 5) ?? "",
         });
       }
 
@@ -159,6 +189,8 @@ const PrayerTimesPage: React.FC = () => {
           date,
           prayer: p.key,
           start_time: "",
+          asr_start_time_shafi: "",
+          asr_start_time_hanafi: "",
           jamaat_time: "",
         };
       });
@@ -181,7 +213,15 @@ const PrayerTimesPage: React.FC = () => {
 
   const updateRow = (
     prayerKey: PrayerKey,
-    patch: Partial<Pick<PrayerRow, "start_time" | "jamaat_time">>
+    patch: Partial<
+      Pick<
+        PrayerRow,
+        | "start_time"
+        | "asr_start_time_shafi"
+        | "asr_start_time_hanafi"
+        | "jamaat_time"
+      >
+    >
   ) => {
     setRows((prev) =>
       prev.map((r) => (r.prayer === prayerKey ? { ...r, ...patch } : r))
@@ -191,7 +231,29 @@ const PrayerTimesPage: React.FC = () => {
     setDirty(true);
   };
 
-  const handleCopyFromPreviousDay = async () => {
+  const buildAsrTimingPayload = (
+    row: Pick<
+      PrayerRow,
+      "start_time" | "asr_start_time_shafi" | "asr_start_time_hanafi"
+    >
+  ) => ({
+    start_time:
+      row.asr_start_time_shafi || row.asr_start_time_hanafi || row.start_time
+        ? `${
+            row.asr_start_time_shafi ||
+            row.asr_start_time_hanafi ||
+            row.start_time
+          }:00`
+        : null,
+    asr_start_time_shafi: row.asr_start_time_shafi
+      ? `${row.asr_start_time_shafi}:00`
+      : null,
+    asr_start_time_hanafi: row.asr_start_time_hanafi
+      ? `${row.asr_start_time_hanafi}:00`
+      : null,
+  });
+
+  const handleCopyFromPreviousDay = async (mode: "both" | "jamaat") => {
     if (!selectedMasjidId || !selectedDate) return;
 
     const current = new Date(selectedDate);
@@ -212,12 +274,17 @@ const PrayerTimesPage: React.FC = () => {
     }
 
     const existing = data as PrayerTimeDbRow[];
-    const map = new Map<PrayerKey, { start: string; jamaat: string }>();
+    const map = new Map<
+      PrayerKey,
+      { start: string; asrShafi: string; asrHanafi: string; jamaat: string }
+    >();
 
     for (const row of existing) {
       map.set(row.prayer, {
-        start: row.start_time.slice(0, 5),
-        jamaat: row.jamaat_time.slice(0, 5),
+        start: row.start_time?.slice(0, 5) ?? "",
+        asrShafi: row.asr_start_time_shafi?.slice(0, 5) ?? "",
+        asrHanafi: row.asr_start_time_hanafi?.slice(0, 5) ?? "",
+        jamaat: row.jamaat_time?.slice(0, 5) ?? "",
       });
     }
 
@@ -227,13 +294,19 @@ const PrayerTimesPage: React.FC = () => {
         if (!fromPrev) return r;
         return {
           ...r,
-          start_time: fromPrev.start,
+          start_time: mode === "both" ? fromPrev.start : r.start_time,
+          asr_start_time_shafi:
+            mode === "both" ? fromPrev.asrShafi : r.asr_start_time_shafi,
+          asr_start_time_hanafi:
+            mode === "both" ? fromPrev.asrHanafi : r.asr_start_time_hanafi,
           jamaat_time: fromPrev.jamaat,
         };
       })
     );
     setMessage(
-      `Copied times from ${prevIso} into the current day (not yet saved).`
+      mode === "both"
+        ? `Copied adhan and jamā‘ah times from ${prevIso} into the current day (not yet saved).`
+        : `Copied jamā‘ah times from ${prevIso} into the current day (not yet saved).`
     );
     setMessageType("success");
     setDirty(true);
@@ -267,21 +340,53 @@ const PrayerTimesPage: React.FC = () => {
     setDirty(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (
+    field: "start_time" | "jamaat_time",
+    setSaving: React.Dispatch<React.SetStateAction<boolean>>,
+    successLabel: string
+  ) => {
     if (!selectedMasjidId || !selectedDate) return;
 
-    // validate: either both empty or both filled
-    for (const r of rows) {
-      if ((r.start_time && !r.jamaat_time) || (!r.start_time && r.jamaat_time)) {
-        setMessage(
-          `For ${r.prayer.toUpperCase()} you must set both start and jamā‘ah, or leave both empty.`
-        );
-        setMessageType("error");
-        return;
-      }
-    }
-
-    const toSave = rows.filter((r) => r.start_time && r.jamaat_time);
+    const toSave =
+      field === "start_time"
+        ? rows
+            .filter((r) =>
+              r.prayer === "asr"
+                ? Boolean(r.asr_start_time_shafi || r.asr_start_time_hanafi)
+                : Boolean(r.start_time)
+            )
+            .map((r) => ({
+              masjid_id: r.masjid_id,
+              date: r.date,
+              prayer: r.prayer,
+              start_time:
+                r.prayer === "asr"
+                  ? `${
+                      r.asr_start_time_shafi || r.asr_start_time_hanafi || ""
+                    }:00`
+                  : `${r.start_time}:00`,
+              asr_start_time_shafi: r.asr_start_time_shafi
+                ? `${r.asr_start_time_shafi}:00`
+                : null,
+              asr_start_time_hanafi: r.asr_start_time_hanafi
+                ? `${r.asr_start_time_hanafi}:00`
+                : null,
+            }))
+        : rows
+            .filter((r) => Boolean(r[field]))
+            .map((r) => ({
+              masjid_id: r.masjid_id,
+              date: r.date,
+              prayer: r.prayer,
+              [field]: `${r[field]}:00`,
+              ...(r.prayer === "asr"
+                ? buildAsrTimingPayload(r)
+                : {
+                    start_time: r.start_time ? `${r.start_time}:00` : null,
+                    asr_start_time_shafi: null,
+                    asr_start_time_hanafi: null,
+                  }),
+            }));
 
     setSaving(true);
     setMessage(null);
@@ -289,21 +394,39 @@ const PrayerTimesPage: React.FC = () => {
 
     try {
       if (toSave.length === 0) {
-        // If everything is cleared, delete rows for that day
         const { error } = await supabase
           .from("masjid_prayer_times")
-          .delete()
+          .update(
+            field === "start_time"
+              ? {
+                  start_time: null,
+                  asr_start_time_shafi: null,
+                  asr_start_time_hanafi: null,
+                }
+              : { [field]: null }
+          )
           .eq("masjid_id", selectedMasjidId)
           .eq("date", selectedDate);
 
         if (error) {
-          console.error("Error deleting masjid_prayer_times", error);
+          console.error(`Error clearing ${field}`, error);
           setMessage(error.message);
           setMessageType("error");
         } else {
-          setMessage("All prayer times cleared for this day.");
+          setMessage(`${successLabel} cleared for this day.`);
           setMessageType("success");
-          setRows(buildEmptyRows(selectedMasjidId, selectedDate));
+          setRows((prev) =>
+            prev.map((r) => ({
+              ...r,
+              [field]: "",
+              ...(field === "start_time"
+                ? {
+                    asr_start_time_shafi: "",
+                    asr_start_time_hanafi: "",
+                  }
+                : {}),
+            }))
+          );
           setDirty(false);
           setLastSavedAt(
             new Date().toLocaleTimeString("it-IT", {
@@ -313,26 +436,19 @@ const PrayerTimesPage: React.FC = () => {
           );
         }
       } else {
-        // IMPORTANT: do NOT send 'id' at all, let Postgres bigserial generate it
-        const payload = toSave.map((r) => ({
-          masjid_id: r.masjid_id,
-          date: r.date,
-          prayer: r.prayer,
-          start_time: `${r.start_time}:00`,
-          jamaat_time: `${r.jamaat_time}:00`,
-        }));
-
         const { error } = await supabase
           .from("masjid_prayer_times")
-          .upsert(payload, { onConflict: "masjid_id,date,prayer" });
+          .upsert(toSave, {
+            onConflict: "masjid_id,date,prayer",
+          });
 
         if (error) {
-          console.error("Error upserting masjid_prayer_times", error);
+          console.error(`Error saving ${field}`, error);
           setMessage(error.message);
           setMessageType("error");
         } else {
           await loadPrayerTimes(selectedMasjidId, selectedDate);
-          setMessage("Prayer times saved for this day.");
+          setMessage(`${successLabel} saved for this day.`);
           setMessageType("success");
           setDirty(false);
           setLastSavedAt(
@@ -348,6 +464,70 @@ const PrayerTimesPage: React.FC = () => {
     }
   };
 
+  const handleToggleCityMasjid = (masjidId: string) => {
+    setSelectedCityMasjidIds((prev) =>
+      prev.includes(masjidId)
+        ? prev.filter((id) => id !== masjidId)
+        : [...prev, masjidId]
+    );
+  };
+
+  const handleApplyAdhanToSameCity = async () => {
+    if (!selectedDate || selectedCityMasjidIds.length === 0) return;
+
+    const adhanRows = rows.filter(
+      (r) =>
+        (r.prayer === "asr" &&
+          (r.asr_start_time_shafi || r.asr_start_time_hanafi)) ||
+        (r.prayer !== "asr" && r.start_time)
+    );
+    if (adhanRows.length === 0) {
+      setMessage("Set at least one adhan start time before applying to a city.");
+      setMessageType("error");
+      return;
+    }
+
+    const payload = selectedCityMasjidIds.flatMap((masjidId) =>
+      adhanRows.map((row) => ({
+        masjid_id: masjidId,
+        date: selectedDate,
+        prayer: row.prayer,
+        ...(row.prayer === "asr"
+          ? buildAsrTimingPayload(row)
+          : {
+              start_time: `${row.start_time}:00`,
+              asr_start_time_shafi: null,
+              asr_start_time_hanafi: null,
+            }),
+      }))
+    );
+
+    setApplyingCityAdhan(true);
+    setMessage(null);
+    setMessageType(null);
+
+    const { error } = await supabase.from("masjid_prayer_times").upsert(
+      payload,
+      {
+        onConflict: "masjid_id,date,prayer",
+      }
+    );
+
+    setApplyingCityAdhan(false);
+
+    if (error) {
+      console.error("Error applying adhan times to same-city masjids", error);
+      setMessage(error.message);
+      setMessageType("error");
+      return;
+    }
+
+    setMessage(
+      `Adhan times applied to ${selectedCityMasjidIds.length} selected masjid(s) in ${selectedMasjid?.city}.`
+    );
+    setMessageType("success");
+  };
+
   // ---------------------------------------------------------------------------
   // UI
   // ---------------------------------------------------------------------------
@@ -358,7 +538,7 @@ const PrayerTimesPage: React.FC = () => {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-base font-semibold text-slate-100">
-            Daily prayer times (start & jamā‘ah)
+            Daily prayer times (adhan & jamā‘ah)
           </h2>
           <p className="text-xs text-slate-400">
             Set official masjid times for Fajr, Dhuhr, Asr, Maghrib and Isha.
@@ -478,11 +658,19 @@ const PrayerTimesPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => void handleCopyFromPreviousDay()}
+              onClick={() => void handleCopyFromPreviousDay("both")}
               disabled={!selectedMasjidId || !selectedDate || loadingPrayers}
               className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800 disabled:opacity-50"
             >
               Copy from previous day
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCopyFromPreviousDay("jamaat")}
+              disabled={!selectedMasjidId || !selectedDate || loadingPrayers}
+              className="text-[11px] px-3 py-1.5 rounded-full border border-emerald-500/70 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+            >
+              Copy jamā‘ah only
             </button>
             <button
               type="button"
@@ -494,6 +682,77 @@ const PrayerTimesPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {selectedMasjid && sameCityMasjids.length > 0 && (
+          <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 space-y-3">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-semibold text-slate-100">
+                Apply adhan times to other masjids in {selectedMasjid.city}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                This copies only <span className="text-slate-200">Start (adhan)</span>{" "}
+                times for this date. Jamā‘ah times are not changed.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {sameCityMasjids.map((masjid) => {
+                const checked = selectedCityMasjidIds.includes(masjid.id);
+                return (
+                  <label
+                    key={masjid.id}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] cursor-pointer ${
+                      checked
+                        ? "border-sky-400/70 bg-sky-500/15 text-sky-100"
+                        : "border-slate-700 bg-slate-900 text-slate-300"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => handleToggleCityMasjid(masjid.id)}
+                      className="accent-sky-500"
+                    />
+                    {masjid.official_name}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedCityMasjidIds((prev) =>
+                    prev.length === sameCityMasjids.length
+                      ? []
+                      : sameCityMasjids.map((m) => m.id)
+                  )
+                }
+                className="text-[11px] px-2.5 py-1 rounded-md border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+              >
+                {selectedCityMasjidIds.length === sameCityMasjids.length
+                  ? "Unselect all"
+                  : "Select all"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleApplyAdhanToSameCity()}
+                disabled={
+                  applyingCityAdhan ||
+                  selectedCityMasjidIds.length === 0 ||
+                  !selectedDate
+                }
+                className="text-[11px] px-3 py-1.5 rounded-full border border-sky-500/70 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
+              >
+                {applyingCityAdhan
+                  ? "Applying adhan…"
+                  : "Apply adhan to selected masjids"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {loadingPrayers ? (
           <div className="text-xs text-slate-400">Loading prayer times…</div>
@@ -519,19 +778,54 @@ const PrayerTimesPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-[11px] text-slate-400">
-                      Start (adhan)
-                    </label>
-                    <input
-                      type="time"
-                      value={row.start_time}
-                      onChange={(e) =>
-                        updateRow(row.prayer, { start_time: e.target.value })
-                      }
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
-                    />
-                  </div>
+                  {row.prayer === "asr" ? (
+                    <div className="space-y-2">
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] text-slate-400">
+                          Start (adhan) — Shafi
+                        </label>
+                        <input
+                          type="time"
+                          value={row.asr_start_time_shafi}
+                          onChange={(e) =>
+                            updateRow(row.prayer, {
+                              asr_start_time_shafi: e.target.value,
+                            })
+                          }
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] text-slate-400">
+                          Start (adhan) — Hanafi
+                        </label>
+                        <input
+                          type="time"
+                          value={row.asr_start_time_hanafi}
+                          onChange={(e) =>
+                            updateRow(row.prayer, {
+                              asr_start_time_hanafi: e.target.value,
+                            })
+                          }
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] text-slate-400">
+                        Start (adhan)
+                      </label>
+                      <input
+                        type="time"
+                        value={row.start_time}
+                        onChange={(e) =>
+                          updateRow(row.prayer, { start_time: e.target.value })
+                        }
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                      />
+                    </div>
+                  )}
 
                   <div className="space-y-1.5">
                     <label className="block text-[11px] text-slate-400">
@@ -557,11 +851,23 @@ const PrayerTimesPage: React.FC = () => {
         <div className="pt-2 flex justify-end gap-2">
           <button
             type="button"
-            onClick={handleSave}
-            disabled={saving || !selectedMasjidId}
+            onClick={() =>
+              void handleSave("start_time", setSavingAdhan, "Adhan times")
+            }
+            disabled={savingAdhan || savingJamaat || !selectedMasjidId}
+            className="px-4 py-2 rounded-lg bg-sky-500 text-sky-950 text-xs font-semibold disabled:opacity-60"
+          >
+            {savingAdhan ? "Saving…" : "Save adhan times"}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              void handleSave("jamaat_time", setSavingJamaat, "Jamā‘ah times")
+            }
+            disabled={savingAdhan || savingJamaat || !selectedMasjidId}
             className="px-4 py-2 rounded-lg bg-emerald-500 text-emerald-950 text-xs font-semibold disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save prayer times"}
+            {savingJamaat ? "Saving…" : "Save jamā‘ah times"}
           </button>
         </div>
       </div>
