@@ -18,6 +18,8 @@ import AnnouncementsPage from "./pages/AnnouncementsPage";
 import PublicHomePage from "./pages/PublicHomePage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import MasjidsAdminPage from "./pages/MasjidsAdminPage";
+import BusinessSponsorshipPage from "./pages/BusinessSponsorshipPage";
+import SponsoredAdsPage from "./pages/SponsoredAdsPage";
 
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
@@ -39,7 +41,8 @@ type AdminTab =
   | "prayers"
   | "jumuah"
   | "announcements"
-  | "analytics";
+  | "analytics"
+  | "sponsoredAds";
 
 type AdminRouteProps = {
   children: React.ReactElement;
@@ -224,6 +227,18 @@ const AdminLayout: React.FC = () => {
             Announcements
           </button>
 
+          <button
+            type="button"
+            onClick={() => setTab("sponsoredAds")}
+            className={`w-full text-left px-3 py-2 rounded-lg ${
+              tab === "sponsoredAds"
+                ? "bg-slate-800/90 text-emerald-300"
+                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+            }`}
+          >
+            Sponsored ads
+          </button>
+
           <div className="pt-3 border-t border-slate-800/70 mt-2 text-[10px] uppercase tracking-wide text-slate-500">
             Insights
           </div>
@@ -254,6 +269,7 @@ const AdminLayout: React.FC = () => {
               {tab === "jumuah" && "Jumuʿah timings & Friday slots"}
               {tab === "announcements" && "Masjid announcements"}
               {tab === "analytics" && "Live analytics dashboard"}
+              {tab === "sponsoredAds" && "Business sponsorship ads"}
             </h1>
             <p className="text-xs text-slate-400">
               {tab === "masjids" &&
@@ -270,6 +286,8 @@ const AdminLayout: React.FC = () => {
                 "Publish official announcements for each masjid: Jumuʿah, events, Ramadan and urgent alerts."}
               {tab === "analytics" &&
                 "Track installations, active usage, retention, frequency, and page time for the mobile app."}
+              {tab === "sponsoredAds" &&
+                "Create and schedule sponsored cards for the Prayers page."}
             </p>
           </div>
 
@@ -298,6 +316,7 @@ const AdminLayout: React.FC = () => {
           {tab === "jumuah" && <JumuahTimesPage />}
           {tab === "announcements" && <AnnouncementsPage />}
           {tab === "analytics" && <AnalyticsPage />}
+          {tab === "sponsoredAds" && <SponsoredAdsPage />}
         </section>
       </main>
     </div>
@@ -315,6 +334,7 @@ const App: React.FC = () => {
         <Routes>
           {/* Public presentation site */}
           <Route path="/" element={<PublicHomePage />} />
+          <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
 
           {/* Legal pages */}
           <Route path="/privacy" element={<PrivacyPage />} />

@@ -338,6 +338,12 @@ const PublicHomePage: React.FC = () => {
                 {item}
               </a>
             ))}
+            <Link
+              to="/sponsor"
+              className="text-sm text-slate-300 hover:text-emerald-400 transition-colors"
+            >
+              Sponsors
+            </Link>
           </nav>
 
           {/* CTA */}
@@ -608,6 +614,12 @@ const PublicHomePage: React.FC = () => {
                 >
                   Request Access
                 </a>
+                <Link
+                  to="/sponsor"
+                  className="px-6 py-3 rounded-xl border border-emerald-500/60 text-emerald-200 font-medium hover:bg-emerald-500/10 transition-colors"
+                >
+                  Sponsor the App
+                </Link>
               </div>
             </div>
 
