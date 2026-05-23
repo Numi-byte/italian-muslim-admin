@@ -39,6 +39,7 @@ type SponsoredAd = {
   cta_label: string | null;
   target_url: string | null;
   image_url: string | null;
+  image_path: string | null;
   discount_label: string | null;
   business_name: string | null;
   starts_on: string;
@@ -87,6 +88,15 @@ const inputClass =
 
 const labelClass = "mb-1 block text-[11px] text-slate-300";
 
+const sponsoredAdsBucket = "prayer-sponsored-ads";
+const maxImageSizeBytes = 5 * 1024 * 1024;
+const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+const imageExtensions: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 const SponsoredAdsPage: React.FC = () => {
   const { profile, user } = useAuth();
   const [ads, setAds] = useState<SponsoredAd[]>([]);
@@ -97,6 +107,9 @@ const SponsoredAdsPage: React.FC = () => {
   const [form, setForm] = useState<FormState>(initialForm);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingAd, setEditingAd] = useState<SponsoredAd | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageInputKey, setImageInputKey] = useState(0);
   const [applicationSearch, setApplicationSearch] = useState("");
   const [applicationStatusFilter, setApplicationStatusFilter] =
     useState("all");
@@ -151,6 +164,95 @@ const SponsoredAdsPage: React.FC = () => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const clearForm = () => {
+    setForm(initialForm);
+    setEditingAd(null);
+    setImageFile(null);
+    setImageInputKey((prev) => prev + 1);
+  };
+
+  const editAd = (ad: SponsoredAd) => {
+    setEditingAd(ad);
+    setImageFile(null);
+    setImageInputKey((prev) => prev + 1);
+    setMessage(null);
+    setMessageType(null);
+    setForm({
+      application_id: ad.application_id ?? "",
+      masjid_id: ad.masjid_id ?? "",
+      status: ad.status,
+      priority: String(ad.priority ?? 0),
+      business_name: ad.business_name ?? "",
+      title: ad.title,
+      subtitle: ad.subtitle ?? "",
+      description: ad.description ?? "",
+      cta_label: ad.cta_label ?? "",
+      target_url: ad.target_url ?? "",
+      image_url: ad.image_url ?? "",
+      discount_label: ad.discount_label ?? "",
+      starts_on: ad.starts_on,
+      ends_on: ad.ends_on ?? "",
+    });
+  };
+
+  const handleImageFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+    setMessage(null);
+    setMessageType(null);
+
+    if (!file) {
+      setImageFile(null);
+      return;
+    }
+
+    if (!allowedImageTypes.includes(file.type)) {
+      setImageFile(null);
+      setMessage("Image must be a JPG, PNG, or WebP file.");
+      setMessageType("error");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > maxImageSizeBytes) {
+      setImageFile(null);
+      setMessage("Image must be smaller than 5 MB.");
+      setMessageType("error");
+      event.target.value = "";
+      return;
+    }
+
+    setImageFile(file);
+  };
+
+  const uploadImage = async (file: File) => {
+    const extension = imageExtensions[file.type] ?? "webp";
+    const safeBusinessName =
+      form.business_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") ||
+      "sponsored-ad";
+    const objectPath = `${user?.id ?? "admin"}/${Date.now()}-${safeBusinessName}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(sponsoredAdsBucket)
+      .upload(objectPath, file, {
+        cacheControl: "3600",
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from(sponsoredAdsBucket)
+      .getPublicUrl(objectPath);
+
+    return {
+      imageUrl: data.publicUrl,
+      imagePath: objectPath,
+    };
+  };
+
   const useApplicationForAd = (app: SponsorshipApplication) => {
     setForm((prev) => ({
       ...prev,
@@ -184,7 +286,7 @@ const SponsoredAdsPage: React.FC = () => {
       supabase
         .from("prayer_sponsored_ads")
         .select(
-          "id, application_id, masjid_id, placement, status, priority, title, subtitle, description, cta_label, target_url, image_url, discount_label, business_name, starts_on, ends_on, created_at"
+          "id, application_id, masjid_id, placement, status, priority, title, subtitle, description, cta_label, target_url, image_url, image_path, discount_label, business_name, starts_on, ends_on, created_at"
         )
         .eq("placement", "prayers_home")
         .order("priority", { ascending: false })
@@ -255,39 +357,69 @@ const SponsoredAdsPage: React.FC = () => {
       return;
     }
 
-    const payload = {
-      application_id: form.application_id || null,
-      masjid_id: form.masjid_id || null,
-      placement: "prayers_home",
-      status: form.status,
-      priority: Number(form.priority) || 0,
-      business_name: form.business_name.trim() || null,
-      title: form.title.trim(),
-      subtitle: form.subtitle.trim() || null,
-      description: form.description.trim() || null,
-      cta_label: form.cta_label.trim() || null,
-      target_url: form.target_url.trim() || null,
-      image_url: form.image_url.trim() || null,
-      discount_label: form.discount_label.trim() || null,
-      starts_on: form.starts_on,
-      ends_on: form.ends_on || null,
-    };
-
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("prayer_sponsored_ads")
-        .insert(payload);
+      const uploadedImage = imageFile ? await uploadImage(imageFile) : null;
+      const nextImageUrl =
+        uploadedImage?.imageUrl ?? (form.image_url.trim() || null);
+      const nextImagePath = uploadedImage
+        ? uploadedImage.imagePath
+        : editingAd && nextImageUrl === editingAd.image_url
+          ? editingAd.image_path
+          : null;
+      const payload = {
+        application_id: form.application_id || null,
+        masjid_id: form.masjid_id || null,
+        placement: "prayers_home",
+        status: form.status,
+        priority: Number(form.priority) || 0,
+        business_name: form.business_name.trim() || null,
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim() || null,
+        description: form.description.trim() || null,
+        cta_label: form.cta_label.trim() || null,
+        target_url: form.target_url.trim() || null,
+        image_url: nextImageUrl,
+        image_path: nextImagePath,
+        discount_label: form.discount_label.trim() || null,
+        starts_on: form.starts_on,
+        ends_on: form.ends_on || null,
+      };
+
+      const { error } = editingAd
+        ? await supabase
+            .from("prayer_sponsored_ads")
+            .update(payload)
+            .eq("id", editingAd.id)
+        : await supabase.from("prayer_sponsored_ads").insert(payload);
 
       if (error) {
+        if (uploadedImage?.imagePath) {
+          await supabase.storage
+            .from(sponsoredAdsBucket)
+            .remove([uploadedImage.imagePath]);
+        }
         setMessage(error.message);
         setMessageType("error");
       } else {
-        setForm(initialForm);
-        setMessage("Sponsored ad created.");
+        if (
+          editingAd?.image_path &&
+          editingAd.image_path !== nextImagePath
+        ) {
+          await supabase.storage
+            .from(sponsoredAdsBucket)
+            .remove([editingAd.image_path]);
+        }
+        clearForm();
+        setMessage(editingAd ? "Sponsored ad updated." : "Sponsored ad created.");
         setMessageType("success");
         await loadData();
       }
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Could not upload the image."
+      );
+      setMessageType("error");
     } finally {
       setSaving(false);
     }
@@ -309,6 +441,10 @@ const SponsoredAdsPage: React.FC = () => {
       setAds((prev) =>
         prev.map((ad) => (ad.id === id ? { ...ad, status } : ad))
       );
+      setEditingAd((prev) => (prev?.id === id ? { ...prev, status } : prev));
+      if (editingAd?.id === id) {
+        setField("status", status);
+      }
     }
   };
 
@@ -353,10 +489,12 @@ const SponsoredAdsPage: React.FC = () => {
         >
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-slate-100">
-              New sponsored ad
+              {editingAd ? "Edit sponsored ad" : "New sponsored ad"}
             </h3>
             <p className="text-[11px] text-slate-500">
-              Keep titles short enough for one mobile line.
+              {editingAd
+                ? "Changes update the existing mobile ad."
+                : "Keep titles short enough for one mobile line."}
             </p>
           </div>
 
@@ -468,13 +606,43 @@ const SponsoredAdsPage: React.FC = () => {
               />
             </div>
             <div className="md:col-span-2">
-              <label className={labelClass}>Image URL</label>
+              <label className={labelClass}>Upload image</label>
+              <input
+                key={imageInputKey}
+                className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:text-slate-100`}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageFileChange}
+              />
+              <p className="mt-1 text-[10px] text-slate-500">
+                JPG, PNG, or WebP. Max 5 MB. Uploaded to{" "}
+                <span className="font-mono text-slate-400">
+                  {sponsoredAdsBucket}
+                </span>
+                .
+              </p>
+              {imageFile && (
+                <p className="mt-1 text-[10px] text-emerald-300">
+                  Ready to upload: {imageFile.name}
+                </p>
+              )}
+              {editingAd?.image_path && !imageFile && (
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Current storage path:{" "}
+                  <span className="font-mono text-slate-400">
+                    {editingAd.image_path}
+                  </span>
+                </p>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              <label className={labelClass}>Image URL fallback</label>
               <input
                 className={inputClass}
                 type="url"
                 value={form.image_url}
                 onChange={(e) => setField("image_url", e.target.value)}
-                placeholder="Stable public image URL"
+                placeholder="Optional legacy public image URL"
               />
             </div>
             <div>
@@ -508,17 +676,21 @@ const SponsoredAdsPage: React.FC = () => {
           <div className="mt-4 flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setForm(initialForm)}
+              onClick={clearForm}
               className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-slate-900"
             >
-              Clear
+              {editingAd ? "Cancel edit" : "Clear"}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="rounded-lg bg-emerald-500 px-4 py-1.5 text-[11px] font-semibold text-emerald-950 disabled:opacity-60"
             >
-              {saving ? "Creating..." : "Create ad"}
+              {saving
+                ? "Saving..."
+                : editingAd
+                  ? "Save changes"
+                  : "Create ad"}
             </button>
           </div>
         </form>
@@ -680,7 +852,36 @@ const SponsoredAdsPage: React.FC = () => {
                       {ad.ends_on ? ` to ${ad.ends_on}` : " onward"} -{" "}
                       {ad.masjid_id ? "masjid-specific" : "app-wide"}
                     </div>
+                    {ad.image_url && (
+                      <div className="mt-3 flex gap-3 rounded-md border border-slate-800 bg-slate-900/50 p-2">
+                        <img
+                          src={ad.image_url}
+                          alt=""
+                          className="h-16 w-24 rounded object-cover"
+                        />
+                        <div className="min-w-0 text-[10px] text-slate-500">
+                          <div className="truncate text-slate-300">
+                            {ad.image_path ?? "External image URL"}
+                          </div>
+                          <a
+                            href={ad.image_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 block truncate text-emerald-300 hover:text-emerald-200"
+                          >
+                            {ad.image_url}
+                          </a>
+                        </div>
+                      </div>
+                    )}
                     <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => editAd(ad)}
+                        className="rounded-full border border-emerald-500/60 px-2 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/10"
+                      >
+                        Edit
+                      </button>
                       {(
                         [
                           "draft",
