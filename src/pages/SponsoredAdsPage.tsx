@@ -15,12 +15,31 @@ type SponsorshipApplication = {
   contact_email: string | null;
   contact_phone: string | null;
   city: string | null;
+  website_url: string | null;
   business_type: string | null;
+  target_audience: string | null;
   offer_type: string | null;
   budget_range: string | null;
   preferred_duration: string | null;
+  notes: string | null;
   source: string | null;
   status: string | null;
+  business_category: string | null;
+  business_model: string | null;
+  business_description: string | null;
+  year_established: number | null;
+  phone_country: string | null;
+  phone_country_code: string | null;
+  phone_local_number: string | null;
+  postal_code: string | null;
+  products_services: string | null;
+  halal_certification_status: string | null;
+  offer_details: string | null;
+  additional_info: string | null;
+  preferred_placement: string | null;
+  heard_about: string | null;
+  logo_image_url: string | null;
+  logo_image_path: string | null;
   created_at: string;
 };
 
@@ -97,6 +116,106 @@ const imageExtensions: Record<string, string> = {
   "image/webp": "webp",
 };
 
+const present = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  return text || null;
+};
+
+const joinPresent = (
+  values: (string | number | null | undefined)[],
+  separator = " - "
+) => values.map(present).filter(Boolean).join(separator);
+
+const phoneForApplication = (app: SponsorshipApplication) =>
+  present(app.contact_phone) ||
+  joinPresent([app.phone_country_code, app.phone_local_number], " ") ||
+  null;
+
+const applicationSearchValues = (app: SponsorshipApplication) => [
+  app.id,
+  app.business_name,
+  app.contact_name,
+  app.contact_email,
+  app.contact_phone,
+  app.phone_country,
+  app.phone_country_code,
+  app.phone_local_number,
+  app.city,
+  app.postal_code,
+  app.website_url,
+  app.business_type,
+  app.business_category,
+  app.business_model,
+  app.business_description,
+  app.year_established,
+  app.target_audience,
+  app.products_services,
+  app.halal_certification_status,
+  app.offer_type,
+  app.offer_details,
+  app.budget_range,
+  app.preferred_duration,
+  app.preferred_placement,
+  app.heard_about,
+  app.notes,
+  app.additional_info,
+  app.source,
+  app.status,
+];
+
+const applicationDetailGroups = (app: SponsorshipApplication) => [
+  {
+    title: "Business",
+    rows: [
+      ["Category", app.business_category],
+      ["Model", app.business_model],
+      ["Type", app.business_type],
+      ["Established", app.year_established],
+      ["Description", app.business_description],
+      ["Products/services", app.products_services],
+      ["Halal certification", app.halal_certification_status],
+    ],
+  },
+  {
+    title: "Contact",
+    rows: [
+      ["Name", app.contact_name],
+      ["Email", app.contact_email],
+      ["Phone", phoneForApplication(app)],
+      ["Phone country", app.phone_country],
+      ["Website", app.website_url],
+    ],
+  },
+  {
+    title: "Location",
+    rows: [
+      ["City", app.city],
+      ["Postal code", app.postal_code],
+    ],
+  },
+  {
+    title: "Sponsorship",
+    rows: [
+      ["Offer type", app.offer_type],
+      ["Offer details", app.offer_details],
+      ["Budget range", app.budget_range],
+      ["Preferred duration", app.preferred_duration],
+      ["Preferred placement", app.preferred_placement],
+      ["Target audience", app.target_audience],
+      ["Heard about", app.heard_about],
+    ],
+  },
+  {
+    title: "Extra",
+    rows: [
+      ["Notes", app.notes],
+      ["Additional info", app.additional_info],
+      ["Logo path", app.logo_image_path],
+    ],
+  },
+];
+
 const SponsoredAdsPage: React.FC = () => {
   const { profile, user } = useAuth();
   const [ads, setAds] = useState<SponsoredAd[]>([]);
@@ -141,20 +260,7 @@ const SponsoredAdsPage: React.FC = () => {
 
       if (!query) return true;
 
-      return [
-        app.id,
-        app.business_name,
-        app.contact_name,
-        app.contact_email,
-        app.contact_phone,
-        app.city,
-        app.business_type,
-        app.offer_type,
-        app.budget_range,
-        app.preferred_duration,
-        app.source,
-        app.status,
-      ]
+      return applicationSearchValues(app)
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
@@ -254,23 +360,41 @@ const SponsoredAdsPage: React.FC = () => {
   };
 
   const useApplicationForAd = (app: SponsorshipApplication) => {
+    const subtitle =
+      app.offer_type ||
+      app.business_category ||
+      app.business_model ||
+      app.business_type ||
+      "";
+    const description = [
+      app.offer_details,
+      app.business_description,
+      app.products_services,
+      joinPresent([app.city, app.postal_code]),
+      app.halal_certification_status
+        ? `Halal certification: ${app.halal_certification_status}`
+        : null,
+      app.budget_range ? `Budget: ${app.budget_range}` : null,
+      app.preferred_duration
+        ? `Preferred duration: ${app.preferred_duration}`
+        : null,
+      app.preferred_placement
+        ? `Preferred placement: ${app.preferred_placement}`
+        : null,
+    ]
+      .map(present)
+      .filter(Boolean)
+      .join("\n\n");
+
     setForm((prev) => ({
       ...prev,
       application_id: app.id,
       business_name: prev.business_name || app.business_name,
-      subtitle: prev.subtitle || app.offer_type || "",
-      description:
-        prev.description ||
-        [
-          app.business_type,
-          app.city,
-          app.budget_range ? `Budget: ${app.budget_range}` : null,
-          app.preferred_duration
-            ? `Preferred duration: ${app.preferred_duration}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" · "),
+      title: prev.title || app.offer_type || app.business_name,
+      subtitle: prev.subtitle || subtitle,
+      description: prev.description || description,
+      target_url: prev.target_url || app.website_url || "",
+      image_url: prev.image_url || app.logo_image_url || "",
     }));
   };
 
@@ -294,7 +418,7 @@ const SponsoredAdsPage: React.FC = () => {
       supabase
         .from("business_sponsorship_applications")
         .select(
-          "id, business_name, contact_name, contact_email, contact_phone, city, business_type, offer_type, budget_range, preferred_duration, source, status, created_at"
+          "id, business_name, contact_name, contact_email, contact_phone, city, website_url, business_type, target_audience, offer_type, budget_range, preferred_duration, notes, source, status, business_category, business_model, business_description, year_established, phone_country, phone_country_code, phone_local_number, postal_code, products_services, halal_certification_status, offer_details, additional_info, preferred_placement, heard_about, logo_image_url, logo_image_path, created_at"
         )
         .order("created_at", { ascending: false })
         .limit(500),
@@ -757,7 +881,7 @@ const SponsoredAdsPage: React.FC = () => {
                 No applications match this search.
               </div>
             ) : (
-              <div className="mt-3 max-h-[280px] space-y-2 overflow-y-auto pr-1">
+              <div className="mt-3 max-h-[520px] space-y-3 overflow-y-auto pr-1">
                 {filteredApplications.map((app) => (
                   <button
                     key={app.id}
@@ -769,6 +893,13 @@ const SponsoredAdsPage: React.FC = () => {
                         : "border-slate-800 bg-slate-950"
                     }`}
                   >
+                    {app.logo_image_url && (
+                      <img
+                        src={app.logo_image_url}
+                        alt=""
+                        className="mb-3 h-24 w-full rounded-md border border-slate-800 object-cover"
+                      />
+                    )}
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="font-semibold text-slate-100">
@@ -790,6 +921,56 @@ const SponsoredAdsPage: React.FC = () => {
                     </div>
                     <div className="mt-1 truncate font-mono text-[10px] text-slate-600">
                       {app.id}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] text-slate-300">
+                      {[
+                        app.business_category,
+                        app.business_model,
+                        app.halal_certification_status
+                          ? `Halal: ${app.halal_certification_status}`
+                          : null,
+                        app.preferred_placement,
+                        app.source ?? "unknown source",
+                        app.created_at.slice(0, 10),
+                      ]
+                        .map(present)
+                        .filter(Boolean)
+                        .map((value) => (
+                          <span
+                            key={value}
+                            className="rounded-full bg-slate-900 px-2 py-0.5"
+                          >
+                            {value}
+                          </span>
+                        ))}
+                    </div>
+                    <div className="mt-3 space-y-3">
+                      {applicationDetailGroups(app).map((group) => {
+                        const rows = group.rows.filter(([, value]) =>
+                          present(value)
+                        );
+                        if (rows.length === 0) return null;
+
+                        return (
+                          <div key={group.title}>
+                            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                              {group.title}
+                            </div>
+                            <dl className="grid gap-x-3 gap-y-1 sm:grid-cols-2">
+                              {rows.map(([label, value]) => (
+                                <div key={label} className="min-w-0">
+                                  <dt className="text-[10px] text-slate-500">
+                                    {label}
+                                  </dt>
+                                  <dd className="break-words text-[11px] text-slate-300">
+                                    {present(value)}
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+                          </div>
+                        );
+                      })}
                     </div>
                   </button>
                 ))}
