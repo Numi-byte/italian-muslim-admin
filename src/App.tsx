@@ -16,6 +16,7 @@ import IftarRequestsPage from "./pages/IftarRequestsPage";
 import PrayerTimesPage from "./pages/PrayerTimesPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
 import PublicHomePage from "./pages/PublicHomePage";
+import MasjidPublicPage from "./pages/MasjidPublicPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import MasjidsAdminPage from "./pages/MasjidsAdminPage";
 import BusinessSponsorshipPage from "./pages/BusinessSponsorshipPage";
@@ -334,6 +335,7 @@ const App: React.FC = () => {
         <Routes>
           {/* Public presentation site */}
           <Route path="/" element={<PublicHomePage />} />
+          <Route path="/masjids/:slug" element={<MasjidPublicPage />} />
           <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
 
           {/* Legal pages */}
