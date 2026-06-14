@@ -295,25 +295,26 @@ const JumuahTimesPage: React.FC = () => {
   // UI
   // -------------------------------------------------------------------
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header row */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-slate-100">
+          <h2 className="text-lg font-semibold text-slate-950">
             Jumuʿah schedule
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="mt-1 max-w-3xl text-sm text-slate-500">
             Define one or more Jumuʿah slots per masjid. Each slot has khutbah &
             jamāʿah time, optional language and notes, and an active date
             range. The mobile app will show only currently valid slots.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400">Masjid:</span>
+        <div className="grid gap-3 text-xs sm:grid-cols-[minmax(0,1fr)_auto] lg:w-[520px]">
+          <div className="space-y-1.5">
+            <span className="font-medium text-slate-600">Masjid</span>
             <select
-              className="text-sm bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm"
               value={selectedMasjidId ?? ""}
               onChange={(e) => setSelectedMasjidId(e.target.value || null)}
               disabled={loadingMasjids}
@@ -329,12 +330,13 @@ const JumuahTimesPage: React.FC = () => {
           <button
             type="button"
             onClick={resetFormForCreate}
-            className="inline-flex items-center justify-center rounded-lg bg-emerald-500 hover:bg-emerald-400 text-emerald-950 text-xs font-semibold px-3 py-1.5 disabled:opacity-60"
+            className="self-end rounded-md bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
             disabled={!selectedMasjidId}
           >
             + Add Jumuʿah slot
           </button>
         </div>
+      </div>
       </div>
 
       {/* Message banner */}
@@ -342,8 +344,8 @@ const JumuahTimesPage: React.FC = () => {
         <div
           className={`rounded-lg border px-3 py-2 text-xs ${
             messageType === "success"
-              ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-200"
-              : "border-red-500/70 bg-red-500/10 text-red-200"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-800"
           }`}
         >
           {message}
@@ -353,13 +355,13 @@ const JumuahTimesPage: React.FC = () => {
       {/* Main 2-column layout */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Left: list */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
-          <div className="text-xs text-slate-400 flex items-center justify-between">
+        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
+          <div className="flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <div>
               {selectedMasjid ? (
                 <>
                   Managing Jumuʿah for{" "}
-                  <span className="text-slate-100 font-medium">
+                  <span className="font-medium text-slate-950">
                     {selectedMasjid.official_name}
                   </span>{" "}
                   ({selectedMasjid.city}).
@@ -379,13 +381,13 @@ const JumuahTimesPage: React.FC = () => {
           </div>
 
           {loadingRows ? (
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-slate-500">
               Loading Jumuʿah slots…
             </div>
           ) : rows.length === 0 ? (
-            <div className="text-xs text-slate-400 border border-dashed border-slate-700 rounded-lg px-3 py-4">
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-500">
               No Jumuʿah slots configured yet for this masjid. Click{" "}
-              <span className="text-emerald-300 font-medium">
+              <span className="font-medium text-emerald-700">
                 “Add Jumuʿah slot”
               </span>{" "}
               to create the first one.
@@ -402,15 +404,15 @@ const JumuahTimesPage: React.FC = () => {
                     key={r.id}
                     type="button"
                     onClick={() => startEdit(r)}
-                    className="w-full text-left rounded-lg border border-slate-800 bg-slate-950/70 hover:bg-slate-900/80 px-3 py-2.5 flex flex-col gap-1.5"
+                    className="flex w-full flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-left hover:bg-white hover:shadow-sm"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-slate-800/80 border border-slate-700 px-2 py-0.5 text-[10px] text-slate-200">
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700">
                           Slot {r.slot}
                         </span>
                         {r.language && (
-                          <span className="inline-flex items-center rounded-full bg-slate-800/80 border border-slate-700 px-2 py-0.5 text-[10px] text-slate-200">
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700">
                             {r.language}
                           </span>
                         )}
@@ -419,10 +421,10 @@ const JumuahTimesPage: React.FC = () => {
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] ${
                           isActive
-                            ? "border-emerald-400/70 text-emerald-200"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                             : isFuture
-                            ? "border-sky-400/70 text-sky-200"
-                            : "border-slate-500/70 text-slate-300"
+                            ? "border-sky-200 bg-sky-50 text-sky-800"
+                            : "border-slate-200 bg-white text-slate-600"
                         }`}
                       >
                         {isActive
@@ -433,14 +435,14 @@ const JumuahTimesPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex gap-4">
                           <div>
                             <span className="text-slate-500 mr-1">
                               Khutbah:
                             </span>
-                            <span className="text-slate-100 font-medium">
+                            <span className="font-medium text-slate-950">
                               {timeToDisplay(r.khutbah_time)}
                             </span>
                           </div>
@@ -448,13 +450,13 @@ const JumuahTimesPage: React.FC = () => {
                             <span className="text-slate-500 mr-1">
                               Jamāʿah:
                             </span>
-                            <span className="text-slate-100 font-medium">
+                            <span className="font-medium text-slate-950">
                               {timeToDisplay(r.jamaat_time)}
                             </span>
                           </div>
                         </div>
                         {r.notes && (
-                          <div className="text-slate-400 line-clamp-1">
+                          <div className="line-clamp-1 text-slate-500">
                             {r.notes}
                           </div>
                         )}
@@ -478,10 +480,10 @@ const JumuahTimesPage: React.FC = () => {
         </div>
 
         {/* Right: editor */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-semibold text-slate-200 uppercase tracking-wide">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-900">
                 {form ? (form.id ? "Edit Jumuʿah slot" : "New Jumuʿah slot") : "Jumuʿah editor"}
               </div>
               <div className="text-[11px] text-slate-500">
@@ -493,9 +495,9 @@ const JumuahTimesPage: React.FC = () => {
           </div>
 
           {!form ? (
-            <div className="mt-2 rounded-lg border border-dashed border-slate-700 bg-slate-950/80 px-3 py-3 text-[11px] text-slate-400">
+            <div className="mt-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-[11px] text-slate-500">
               No slot selected. Click{" "}
-              <span className="text-emerald-300 font-medium">
+              <span className="font-medium text-emerald-700">
                 “Add Jumuʿah slot”
               </span>{" "}
               or choose one from the list to edit.
@@ -510,7 +512,7 @@ const JumuahTimesPage: React.FC = () => {
             >
               {/* Slot number */}
               <div className="space-y-1">
-                <label className="block text-[11px] text-slate-400">
+                <label className="block text-[11px] font-medium text-slate-500">
                   Slot number
                 </label>
                 <input
@@ -519,7 +521,7 @@ const JumuahTimesPage: React.FC = () => {
                   max={5}
                   value={form.slot}
                   onChange={(e) => handleChange("slot", e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                   placeholder="1, 2, 3…"
                 />
                 <p className="text-[10px] text-slate-500">
@@ -530,7 +532,7 @@ const JumuahTimesPage: React.FC = () => {
               {/* Times */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-400">
+                  <label className="block text-[11px] font-medium text-slate-500">
                     Khutbah time
                   </label>
                   <input
@@ -539,11 +541,11 @@ const JumuahTimesPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("khutbah_time", e.target.value)
                     }
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-400">
+                  <label className="block text-[11px] font-medium text-slate-500">
                     Jamāʿah time
                   </label>
                   <input
@@ -552,7 +554,7 @@ const JumuahTimesPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("jamaat_time", e.target.value)
                     }
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                   />
                 </div>
               </div>
@@ -560,26 +562,26 @@ const JumuahTimesPage: React.FC = () => {
               {/* Language & notes */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-400">
+                  <label className="block text-[11px] font-medium text-slate-500">
                     Language (optional)
                   </label>
                   <input
                     type="text"
                     value={form.language}
                     onChange={(e) => handleChange("language", e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                     placeholder="Italian, Arabic, Urdu…"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-400">
+                  <label className="block text-[11px] font-medium text-slate-500">
                     Notes (optional)
                   </label>
                   <input
                     type="text"
                     value={form.notes}
                     onChange={(e) => handleChange("notes", e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                     placeholder="Capacity, brothers only, youth group…"
                   />
                 </div>
@@ -588,7 +590,7 @@ const JumuahTimesPage: React.FC = () => {
               {/* Validity range */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-400">
+                  <label className="block text-[11px] font-medium text-slate-500">
                     Valid from (optional)
                   </label>
                   <input
@@ -597,21 +599,21 @@ const JumuahTimesPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("valid_from", e.target.value)
                     }
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                   />
                   <p className="text-[10px] text-slate-500">
                     Leave empty to make it valid immediately.
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <label className="block text-[11px] text-slate-400">
+                  <label className="block text-[11px] font-medium text-slate-500">
                     Valid until (optional)
                   </label>
                   <input
                     type="date"
                     value={form.valid_to}
                     onChange={(e) => handleChange("valid_to", e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                   />
                   <p className="text-[10px] text-slate-500">
                     Leave empty if the slot should stay until you change it.
@@ -642,14 +644,14 @@ const JumuahTimesPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setForm(null)}
-                    className="px-3 py-1.5 rounded-lg border border-slate-600 text-[11px] text-slate-200 hover:bg-slate-800/80"
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-4 py-1.5 rounded-lg bg-emerald-500 text-emerald-950 text-[11px] font-semibold disabled:opacity-60"
+                    className="rounded-md bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
                   >
                     {saving
                       ? "Saving…"

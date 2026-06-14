@@ -300,48 +300,48 @@ const MasjidsAdminPage: React.FC = () => {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-base font-semibold text-slate-100">
+        <h2 className="text-lg font-semibold text-slate-950">
           Masjid directory
         </h2>
-        <p className="text-xs text-slate-400">
+        <p className="text-sm text-slate-500">
           Onboard new masjids, update details and control which ones are
           visible in the app.
         </p>
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-500/60 bg-red-500/10 text-xs text-red-200 px-3 py-2">
+        <div className="rounded-md border border-red-200 bg-red-50 text-xs text-red-800 px-3 py-2">
           {error}
         </div>
       )}
 
       {successMsg && (
-        <div className="rounded-md border border-emerald-500/60 bg-emerald-500/10 text-xs text-emerald-200 px-3 py-2">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 text-xs text-emerald-800 px-3 py-2">
           {successMsg}
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden text-xs relative">
+      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white text-xs shadow-sm">
         {/* Header bar */}
-        <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-slate-200 font-medium">Masjids</span>
+            <span className="font-medium text-slate-950">Masjids</span>
             {loading && (
-              <span className="text-[11px] text-slate-400">Loading…</span>
+              <span className="text-[11px] text-slate-500">Loading…</span>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={openCreateForm}
-              className="text-[11px] px-3 py-1.5 rounded-full border border-emerald-500/70 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
+              className="rounded-md bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-800"
             >
               + Add masjid
             </button>
             <button
               type="button"
               onClick={() => void handleRefresh()}
-              className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200"
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
             >
               Refresh
             </button>
@@ -349,51 +349,51 @@ const MasjidsAdminPage: React.FC = () => {
         </div>
 
         {rows.length === 0 ? (
-          <div className="p-4 text-slate-400">
+          <div className="p-4 text-slate-500">
             No masjids yet. Use{" "}
-            <span className="font-semibold text-slate-200">
+            <span className="font-semibold text-slate-800">
               &ldquo;Add masjid&rdquo;
             </span>{" "}
             to onboard your first one.
           </div>
         ) : (
-          <div className="max-h-[520px] overflow-y-auto">
-            <table className="min-w-full border-collapse">
-              <thead className="bg-slate-900/80 sticky top-0 z-10">
+          <div className="max-h-[520px] overflow-auto">
+            <table className="min-w-[760px] border-collapse">
+              <thead className="sticky top-0 z-10 bg-slate-50">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
+                  <th className="px-3 py-2 text-left font-medium text-slate-600">
                     Name
                   </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
+                  <th className="px-3 py-2 text-left font-medium text-slate-600">
                     Location
                   </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
+                  <th className="px-3 py-2 text-left font-medium text-slate-600">
                     Slug / TZ
                   </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
+                  <th className="px-3 py-2 text-left font-medium text-slate-600">
                     Status
                   </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
+                  <th className="px-3 py-2 text-left font-medium text-slate-600">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((m) => (
-                  <tr key={m.id} className="border-t border-slate-800">
-                    <td className="px-3 py-2 align-middle text-slate-100">
+                  <tr key={m.id} className="border-t border-slate-100">
+                    <td className="px-3 py-2 align-middle text-slate-900">
                       <div className="font-semibold">
                         {m.official_name}
                       </div>
                       {m.short_name && (
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-slate-500">
                           {m.short_name}
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2 align-middle text-slate-200">
+                    <td className="px-3 py-2 align-middle text-slate-700">
                       <div>{m.city}</div>
-                      <div className="text-[11px] text-slate-400">
+                      <div className="text-[11px] text-slate-500">
                         {m.region ?? ""}
                       </div>
                       {(m.address_line1 || m.postal_code) && (
@@ -403,24 +403,24 @@ const MasjidsAdminPage: React.FC = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2 align-middle text-slate-200">
-                      <div className="text-[11px] text-slate-400">
+                    <td className="px-3 py-2 align-middle text-slate-700">
+                      <div className="text-[11px] text-slate-500">
                         slug
                       </div>
-                      <div className="text-[11px] text-slate-100">
+                      <div className="text-[11px] text-slate-900">
                         {m.slug}
                       </div>
-                      <div className="mt-1 text-[11px] text-slate-400">
+                      <div className="mt-1 text-[11px] text-slate-500">
                         {m.timezone}
                       </div>
                     </td>
                     <td className="px-3 py-2 align-middle">
                       {m.is_active ? (
-                        <span className="inline-flex px-2 py-0.5 rounded-full bg-emerald-500 text-emerald-950 font-medium">
+                        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
                           Active
                         </span>
                       ) : (
-                        <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-700 text-slate-50 font-medium">
+                        <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
                           Hidden
                         </span>
                       )}
@@ -430,7 +430,7 @@ const MasjidsAdminPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => openEditForm(m)}
-                          className="px-2 py-1 rounded-full text-[11px] border border-slate-600 bg-slate-900 hover:bg-slate-800 text-slate-100"
+                          className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                         >
                           Edit
                         </button>
@@ -438,7 +438,7 @@ const MasjidsAdminPage: React.FC = () => {
                           type="button"
                           disabled={updatingActiveId === m.id}
                           onClick={() => void handleToggleActive(m)}
-                          className="px-2 py-1 rounded-full text-[11px] border border-amber-500/70 bg-amber-500/10 text-amber-100 disabled:opacity-60"
+                          className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800 disabled:opacity-60"
                         >
                           {m.is_active ? "Hide in app" : "Activate"}
                         </button>
@@ -453,23 +453,23 @@ const MasjidsAdminPage: React.FC = () => {
 
         {/* Slide-over / panel for form */}
         {formMode && (
-          <div className="absolute inset-0 bg-black/40 flex justify-end backdrop-blur-sm">
-            <div className="w-full max-w-md h-full bg-slate-950 border-l border-slate-800 p-4 flex flex-col">
+          <div className="absolute inset-0 flex justify-end bg-slate-950/30 backdrop-blur-sm">
+            <div className="flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-950">
                     {formMode === "create"
                       ? "Add masjid"
                       : "Edit masjid"}
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-500">
                     Basic profile used in the app and Ramadan tools.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={closeForm}
-                  className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                  className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Close
                 </button>
@@ -480,7 +480,7 @@ const MasjidsAdminPage: React.FC = () => {
                 className="space-y-3 overflow-y-auto pr-1"
               >
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-1">
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
                     Official name *
                   </label>
                   <input
@@ -489,13 +489,13 @@ const MasjidsAdminPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("official_name", e.target.value)
                     }
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     placeholder="Centro Islamico di Bolzano"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-1">
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
                     Short name
                   </label>
                   <input
@@ -504,14 +504,14 @@ const MasjidsAdminPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("short_name", e.target.value)
                     }
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     placeholder="Bolzano mosque"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] text-slate-300 mb-1">
+                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
                       City *
                     </label>
                     <input
@@ -520,12 +520,12 @@ const MasjidsAdminPage: React.FC = () => {
                       onChange={(e) =>
                         handleChange("city", e.target.value)
                       }
-                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                       placeholder="Bolzano"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-300 mb-1">
+                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
                       Region / province
                     </label>
                     <input
@@ -534,14 +534,14 @@ const MasjidsAdminPage: React.FC = () => {
                       onChange={(e) =>
                         handleChange("region", e.target.value)
                       }
-                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                       placeholder="Alto Adige"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-1">
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
                     Address line 1
                   </label>
                   <input
@@ -550,13 +550,13 @@ const MasjidsAdminPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("address_line1", e.target.value)
                     }
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     placeholder="Via Example 12"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-1">
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
                     Address line 2
                   </label>
                   <input
@@ -565,14 +565,14 @@ const MasjidsAdminPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("address_line2", e.target.value)
                     }
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     placeholder="(optional)"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] text-slate-300 mb-1">
+                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
                       Postal code
                     </label>
                     <input
@@ -581,12 +581,12 @@ const MasjidsAdminPage: React.FC = () => {
                       onChange={(e) =>
                         handleChange("postal_code", e.target.value)
                       }
-                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                       placeholder="39100"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-300 mb-1">
+                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
                       Timezone *
                     </label>
                     <input
@@ -595,14 +595,14 @@ const MasjidsAdminPage: React.FC = () => {
                       onChange={(e) =>
                         handleChange("timezone", e.target.value)
                       }
-                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                       placeholder="Europe/Rome"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-300 mb-1">
+                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
                     Slug *
                   </label>
                   <input
@@ -611,7 +611,7 @@ const MasjidsAdminPage: React.FC = () => {
                     onChange={(e) =>
                       handleChange("slug", e.target.value)
                     }
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
                     placeholder="bolzano-masjid"
                   />
                   <p className="mt-1 text-[10px] text-slate-500">
@@ -620,14 +620,14 @@ const MasjidsAdminPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <label className="inline-flex items-center gap-2 text-[11px] text-slate-200">
+                  <label className="inline-flex items-center gap-2 text-[11px] text-slate-700">
                     <input
                       type="checkbox"
                       checked={form.is_active}
                       onChange={(e) =>
                         handleChange("is_active", e.target.checked)
                       }
-                      className="h-3 w-3 rounded border-slate-600 bg-slate-900 text-emerald-500"
+                      className="h-3 w-3 rounded border-slate-300 text-emerald-700"
                     />
                     Visible in mobile app
                   </label>
@@ -637,14 +637,14 @@ const MasjidsAdminPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={closeForm}
-                    className="px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-[11px] text-slate-200 hover:bg-slate-800"
+                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-3 py-1.5 rounded-full border border-emerald-500 bg-emerald-500 text-[11px] text-emerald-950 font-semibold disabled:opacity-60"
+                    className="rounded-md bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
                   >
                     {saving
                       ? "Saving..."

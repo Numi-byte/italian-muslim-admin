@@ -244,15 +244,16 @@ const AnalyticsPage: React.FC = () => {
 
   return (
     <div className="space-y-5">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-base font-semibold text-slate-50">
+            <h2 className="text-lg font-semibold text-slate-950">
               Live app analytics
             </h2>
             <LiveBadge status={liveStatus} />
           </div>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-sm text-slate-500">
             Server-side reads from analytics views. No personal data is shown.
           </p>
         </div>
@@ -286,16 +287,17 @@ const AnalyticsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => void fetchAnalytics()}
-            className="h-9 rounded-md border border-slate-700 bg-slate-900 px-3 text-[11px] font-medium text-slate-100 hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+            className="h-9 rounded-md border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
             disabled={refreshing}
           >
             {refreshing ? "Refreshing" : "Refresh"}
           </button>
         </div>
       </div>
+      </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/50 bg-red-950/50 p-3 text-xs text-red-100">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
           {error}
         </div>
       )}
@@ -496,14 +498,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
   detail,
   formatter = formatNumber,
 }) => (
-  <div className="min-h-28 rounded-lg border border-slate-800 bg-slate-950/70 p-4">
+  <div className="min-h-28 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
     <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
       {label}
     </div>
-    <div className="mt-3 text-2xl font-semibold text-slate-50">
+    <div className="mt-3 text-2xl font-semibold text-slate-950">
       {formatter(value)}
     </div>
-    <div className="mt-2 text-[11px] leading-4 text-slate-400">{detail}</div>
+    <div className="mt-2 text-[11px] leading-4 text-slate-500">{detail}</div>
   </div>
 );
 
@@ -514,10 +516,10 @@ type PanelProps = {
 };
 
 const Panel: React.FC<PanelProps> = ({ title, subtitle, children }) => (
-  <section className="rounded-lg border border-slate-800 bg-slate-950/60">
-    <div className="border-b border-slate-800 px-4 py-3">
-      <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
-      <p className="mt-1 text-[11px] text-slate-400">{subtitle}</p>
+  <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="border-b border-slate-200 px-4 py-3">
+      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+      <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p>
     </div>
     <div className="p-4">{children}</div>
   </section>
@@ -527,9 +529,9 @@ const EmptyPanel: React.FC<{ title: string; children: ReactNode }> = ({
   title,
   children,
 }) => (
-  <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-5">
-    <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
-    <p className="mt-2 text-xs text-slate-400">{children}</p>
+  <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+    <p className="mt-2 text-xs text-slate-500">{children}</p>
   </div>
 );
 
@@ -538,10 +540,10 @@ const LiveBadge: React.FC<{ status: "connecting" | "live" | "offline" }> = ({
 }) => {
   const statusClass =
     status === "live"
-      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-300"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
       : status === "connecting"
-        ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
-        : "border-red-500/50 bg-red-500/10 text-red-200";
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-red-200 bg-red-50 text-red-800";
 
   return (
     <span
@@ -559,12 +561,12 @@ const FilterSelect: React.FC<{
   onChange: (value: string) => void;
   children: ReactNode;
 }> = ({ label, value, onChange, children }) => (
-  <label className="flex h-9 items-center gap-2 rounded-md border border-slate-800 bg-slate-950 px-3 text-[11px] text-slate-400">
+  <label className="flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-[11px] text-slate-500 shadow-sm">
     {label}
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="bg-transparent text-slate-100 outline-none"
+      className="bg-transparent text-slate-900 outline-none"
     >
       {children}
     </select>
@@ -575,9 +577,9 @@ const DisabledFilter: React.FC<{ label: string; value: string }> = ({
   label,
   value,
 }) => (
-  <div className="flex h-9 items-center gap-2 rounded-md border border-slate-800 bg-slate-950 px-3 text-[11px] text-slate-500 opacity-70">
+  <div className="flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] text-slate-500 opacity-80">
     <span>{label}</span>
-    <span className="text-slate-400">{value}</span>
+    <span className="text-slate-600">{value}</span>
   </div>
 );
 
@@ -611,7 +613,7 @@ const DataTable = <T extends Record<string, unknown>>({
     <div className="overflow-x-auto">
       <table className="min-w-full table-fixed border-collapse text-xs">
         <thead>
-          <tr className="border-b border-slate-800 text-[11px] uppercase tracking-wide text-slate-500">
+          <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
             {columns.map((column) => (
               <th
                 key={String(column.key)}
@@ -622,7 +624,7 @@ const DataTable = <T extends Record<string, unknown>>({
                 <button
                   type="button"
                   onClick={() => onSort(column.key)}
-                  className="inline-flex items-center gap-1 hover:text-slate-200"
+                  className="inline-flex items-center gap-1 hover:text-slate-900"
                 >
                   {column.label}
                   {sortKey === column.key && (
@@ -637,7 +639,7 @@ const DataTable = <T extends Record<string, unknown>>({
           {rows.map((row, index) => (
             <tr
               key={index}
-              className="border-b border-slate-900 text-slate-300 last:border-0 hover:bg-slate-900/50"
+              className="border-b border-slate-100 text-slate-700 last:border-0 hover:bg-slate-50"
             >
               {columns.map((column) => (
                 <td
@@ -658,7 +660,7 @@ const DataTable = <T extends Record<string, unknown>>({
 };
 
 const TableEmptyState: React.FC<{ label: string }> = ({ label }) => (
-  <div className="rounded-md border border-dashed border-slate-800 bg-slate-950/50 px-4 py-8 text-center text-xs text-slate-500">
+  <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-xs text-slate-500">
     {label}
   </div>
 );
@@ -765,7 +767,7 @@ const RetentionChart: React.FC<{ rows: RetentionRow[] }> = ({ rows }) => {
             key={row.install_date ?? `retention-${index}`}
             className="grid grid-cols-[88px_1fr_72px] items-center gap-3 text-xs"
           >
-            <div className="text-slate-400">
+            <div className="text-slate-500">
               {formatShortDate(row.install_date)}
             </div>
             <div className="space-y-1.5">
@@ -773,7 +775,7 @@ const RetentionChart: React.FC<{ rows: RetentionRow[] }> = ({ rows }) => {
               <RetentionBar label="D7" value={d7} color="bg-sky-400" />
               <RetentionBar label="D30" value={d30} color="bg-amber-300" />
             </div>
-            <div className="text-right text-[11px] text-slate-400">
+            <div className="text-right text-[11px] text-slate-500">
               <div>{formatNumber(total)} installs</div>
               <div>{formatNumber(row.inferred_uninstalled)} uninst.</div>
               <div>{formatDecimal(row.average_days_installed)} avg days</div>
@@ -792,13 +794,13 @@ const RetentionBar: React.FC<{
 }> = ({ label, value, color }) => (
   <div className="grid grid-cols-[34px_1fr_42px] items-center gap-2">
     <span className="text-[10px] font-semibold text-slate-500">{label}</span>
-    <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
+    <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
       <div
         className={`h-full rounded-full ${color}`}
         style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
       />
     </div>
-    <span className="text-right text-[10px] text-slate-300">
+    <span className="text-right text-[10px] text-slate-600">
       {value.toFixed(0)}%
     </span>
   </div>
