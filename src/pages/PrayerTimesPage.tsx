@@ -49,6 +49,27 @@ const getTodayIsoRome = (): string => {
   return iso;
 };
 
+const shiftIsoDate = (isoDate: string, deltaDays: number): string => {
+  const date = new Date(`${isoDate}T00:00:00`);
+  date.setDate(date.getDate() + deltaDays);
+  return date.toISOString().slice(0, 10);
+};
+
+const formatDayLabel = (isoDate: string): string =>
+  new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(`${isoDate}T00:00:00`));
+
+const formatFullDate = (isoDate: string): string =>
+  new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${isoDate}T00:00:00`));
+
 const PrayerTimesPage: React.FC = () => {
   const { isAdmin, isPrayerTimingEditor, accessiblePrayerMasjidIds } =
     useAuth();
@@ -81,6 +102,20 @@ const PrayerTimesPage: React.FC = () => {
   const selectedMasjid = useMemo(
     () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
     [masjids, selectedMasjidId]
+  );
+
+  const daySelectorDays = useMemo(
+    () =>
+      [-3, -2, -1, 0, 1, 2, 3].map((offset) => {
+        const date = shiftIsoDate(selectedDate, offset);
+        return {
+          date,
+          label: offset === 0 ? "Selected" : formatDayLabel(date),
+          compactLabel:
+            offset === 0 ? formatDayLabel(date) : formatDayLabel(date),
+        };
+      }),
+    [selectedDate]
   );
 
   const sameCityMasjids = useMemo(() => {
@@ -347,6 +382,13 @@ const PrayerTimesPage: React.FC = () => {
     setSelectedDate(getTodayIsoRome());
   };
 
+  const handleSelectDate = (date: string) => {
+    setMessage(null);
+    setMessageType(null);
+    setDirty(false);
+    setSelectedDate(date);
+  };
+
   const handleClearAllLocal = () => {
     if (!selectedMasjidId || !selectedDate) return;
     setRows(buildEmptyRows(selectedMasjidId, selectedDate));
@@ -550,24 +592,25 @@ const PrayerTimesPage: React.FC = () => {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-slate-100">
+          <h2 className="text-lg font-semibold text-slate-950">
             Daily prayer times (adhan & jamā‘ah)
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">
             Set official masjid times for Fajr, Dhuhr, Asr, Maghrib and Isha.
             The mobile app will read these as the source of truth.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 md:items-end text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400">Masjid:</span>
+        <div className="grid gap-3 text-xs sm:grid-cols-2 lg:w-[560px]">
+          <div className="space-y-1.5">
+            <span className="font-medium text-slate-600">Masjid</span>
             <select
-              className="text-sm bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100"
+              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm"
               value={selectedMasjidId ?? ""}
               onChange={(e) => {
                 setSelectedMasjidId(e.target.value || null);
@@ -585,13 +628,13 @@ const PrayerTimesPage: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400">Date:</span>
-            <div className="flex items-center gap-1">
+          <div className="space-y-1.5">
+            <span className="font-medium text-slate-600">Date</span>
+            <div className="grid grid-cols-[48px_minmax(0,1fr)_48px] gap-1">
               <button
                 type="button"
                 onClick={() => handleChangeDateBy(-1)}
-                className="px-2 py-1 rounded-md border border-slate-700 bg-slate-900 text-[11px] text-slate-200 hover:bg-slate-800"
+                className="rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
                 ◀
               </button>
@@ -604,19 +647,19 @@ const PrayerTimesPage: React.FC = () => {
                   setMessageType(null);
                   setDirty(false);
                 }}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                className="min-w-0 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-950 shadow-sm"
               />
               <button
                 type="button"
                 onClick={() => handleChangeDateBy(1)}
-                className="px-2 py-1 rounded-md border border-slate-700 bg-slate-900 text-[11px] text-slate-200 hover:bg-slate-800"
+                className="rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
                 ▶
               </button>
               <button
                 type="button"
                 onClick={handleGoToday}
-                className="ml-2 px-3 py-1 rounded-full border border-emerald-500/70 text-[11px] text-emerald-300 hover:bg-emerald-500/10"
+                className="hidden"
               >
                 Today
               </button>
@@ -624,6 +667,54 @@ const PrayerTimesPage: React.FC = () => {
           </div>
         </div>
       </div>
+      </div>
+
+      {isLimitedPrayerEditor && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                Jamaah editor
+              </div>
+              <div className="mt-1 text-base font-semibold text-slate-950">
+                {formatFullDate(selectedDate)}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleGoToday}
+              className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+            >
+              Today
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            {daySelectorDays.map((day) => {
+              const selected = day.date === selectedDate;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  onClick={() => handleSelectDate(day.date)}
+                  className={`rounded-md border px-3 py-2 text-left ${
+                    selected
+                      ? "border-emerald-500 bg-white text-emerald-900 shadow-sm"
+                      : "border-emerald-200 bg-emerald-100/60 text-slate-700 hover:bg-white"
+                  }`}
+                >
+                  <span className="block text-xs font-semibold">
+                    {day.compactLabel}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                    {day.date}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Message + status line */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -631,15 +722,15 @@ const PrayerTimesPage: React.FC = () => {
           <div
             className={`rounded-lg border px-3 py-2 text-xs max-w-xl ${
               messageType === "success"
-                ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-200"
-                : "border-red-500/70 bg-red-500/10 text-red-200"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-800"
             }`}
           >
             {message}
           </div>
         )}
 
-        <div className="flex items-center gap-3 text-[11px] text-slate-500">
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
           {dirty && (
             <span className="inline-flex items-center px-2 py-1 rounded-full border border-amber-400/60 bg-amber-500/10 text-amber-200">
               ● Unsaved changes
@@ -648,7 +739,7 @@ const PrayerTimesPage: React.FC = () => {
           {lastSavedAt && !dirty && (
             <span className="text-slate-500">
               Last saved at{" "}
-              <span className="text-slate-300 font-medium">
+              <span className="font-medium text-slate-700">
                 {lastSavedAt}
               </span>
             </span>
@@ -657,22 +748,22 @@ const PrayerTimesPage: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-4">
-        <div className="flex items-center justify-between text-xs">
-          <div className="text-slate-400">
+      <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+        <div className="flex flex-col gap-3 text-xs lg:flex-row lg:items-center lg:justify-between">
+          <div className="text-slate-500">
             {selectedMasjid ? (
               <>
                 Editing{" "}
-                <span className="text-slate-100 font-medium">
+                <span className="font-medium text-slate-950">
                   {selectedMasjid.official_name}
                 </span>{" "}
-                on <span className="text-slate-100">{selectedDate}</span>
+                on <span className="text-slate-950">{selectedDate}</span>
               </>
             ) : (
               "Select a masjid to start."
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid gap-2 sm:flex sm:items-center">
             <button
               type="button"
               onClick={() => void handleCopyFromPreviousDay("both")}
@@ -682,7 +773,7 @@ const PrayerTimesPage: React.FC = () => {
                 !selectedDate ||
                 loadingPrayers
               }
-              className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Copy from previous day
             </button>
@@ -690,7 +781,7 @@ const PrayerTimesPage: React.FC = () => {
               type="button"
               onClick={() => void handleCopyFromPreviousDay("jamaat")}
               disabled={!selectedMasjidId || !selectedDate || loadingPrayers}
-              className="text-[11px] px-3 py-1.5 rounded-full border border-emerald-500/70 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+              className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
             >
               Copy jamā‘ah only
             </button>
@@ -700,7 +791,7 @@ const PrayerTimesPage: React.FC = () => {
               disabled={
                 isLimitedPrayerEditor || !selectedMasjidId || rows.length === 0
               }
-              className="text-[11px] px-3 py-1.5 rounded-full border border-red-500/70 bg-red-500/5 text-red-200 hover:bg-red-500/20 disabled:opacity-40"
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-40"
             >
               Clear all (this day)
             </button>
@@ -708,13 +799,13 @@ const PrayerTimesPage: React.FC = () => {
         </div>
 
         {!isLimitedPrayerEditor && selectedMasjid && sameCityMasjids.length > 0 && (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 space-y-3">
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
             <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold text-slate-100">
+              <p className="text-xs font-semibold text-slate-900">
                 Apply adhan times to other masjids in {selectedMasjid.city}
               </p>
-              <p className="text-[11px] text-slate-400">
-                This copies only <span className="text-slate-200">Start (adhan)</span>{" "}
+              <p className="text-[11px] text-slate-500">
+                This copies only <span className="text-slate-900">Start (adhan)</span>{" "}
                 times for this date. Jamā‘ah times are not changed.
               </p>
             </div>
@@ -728,7 +819,7 @@ const PrayerTimesPage: React.FC = () => {
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] cursor-pointer ${
                       checked
                         ? "border-sky-400/70 bg-sky-500/15 text-sky-100"
-                        : "border-slate-700 bg-slate-900 text-slate-300"
+                        : "border-slate-200 bg-white text-slate-600"
                     }`}
                   >
                     <input
@@ -753,7 +844,7 @@ const PrayerTimesPage: React.FC = () => {
                       : sameCityMasjids.map((m) => m.id)
                   )
                 }
-                className="text-[11px] px-2.5 py-1 rounded-md border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+                className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
               >
                 {selectedCityMasjidIds.length === sameCityMasjids.length
                   ? "Unselect all"
@@ -768,7 +859,7 @@ const PrayerTimesPage: React.FC = () => {
                   selectedCityMasjidIds.length === 0 ||
                   !selectedDate
                 }
-                className="text-[11px] px-3 py-1.5 rounded-full border border-sky-500/70 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20 disabled:opacity-50"
+                className="rounded-md border border-sky-300 bg-sky-50 px-3 py-1.5 text-[11px] font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50"
               >
                 {applyingCityAdhan
                   ? "Applying adhan…"
@@ -779,7 +870,7 @@ const PrayerTimesPage: React.FC = () => {
         )}
 
         {isLimitedPrayerEditor && (
-          <div className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
             This account can edit only jamā‘ah times for this masjid.
           </div>
         )}
@@ -791,19 +882,19 @@ const PrayerTimesPage: React.FC = () => {
             No prayers to show. Select a masjid and date.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
+          <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 xl:grid-cols-5">
             {rows.map((row) => {
               const label = PRAYERS.find((p) => p.key === row.prayer)?.label;
               return (
                 <div
                   key={row.prayer}
-                  className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 flex flex-col gap-2"
+                  className="flex min-h-40 flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-100 font-semibold">
+                    <span className="font-semibold text-slate-950">
                       {label}
                     </span>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wide">
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">
                       {row.prayer.toUpperCase()}
                     </span>
                   </div>
@@ -811,7 +902,7 @@ const PrayerTimesPage: React.FC = () => {
                   {row.prayer === "asr" ? (
                     <div className="space-y-2">
                       <div className="space-y-1.5">
-                        <label className="block text-[11px] text-slate-400">
+                        <label className="block text-[11px] font-medium text-slate-500">
                           Start (adhan) — Shafi
                         </label>
                         <input
@@ -823,11 +914,11 @@ const PrayerTimesPage: React.FC = () => {
                             })
                           }
                           disabled={isLimitedPrayerEditor}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-[11px] text-slate-400">
+                        <label className="block text-[11px] font-medium text-slate-500">
                           Start (adhan) — Hanafi
                         </label>
                         <input
@@ -839,13 +930,13 @@ const PrayerTimesPage: React.FC = () => {
                             })
                           }
                           disabled={isLimitedPrayerEditor}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
                         />
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] text-slate-400">
+                      <label className="block text-[11px] font-medium text-slate-500">
                         Start (adhan)
                       </label>
                       <input
@@ -855,13 +946,13 @@ const PrayerTimesPage: React.FC = () => {
                           updateRow(row.prayer, { start_time: e.target.value })
                         }
                         disabled={isLimitedPrayerEditor}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
                       />
                     </div>
                   )}
 
                   <div className="space-y-1.5">
-                    <label className="block text-[11px] text-slate-400">
+                    <label className="block text-[11px] font-medium text-slate-500">
                       Jamā‘ah (iqamah)
                     </label>
                     <input
@@ -872,7 +963,7 @@ const PrayerTimesPage: React.FC = () => {
                           jamaat_time: e.target.value,
                         })
                       }
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950"
                     />
                   </div>
                 </div>
@@ -881,7 +972,7 @@ const PrayerTimesPage: React.FC = () => {
           </div>
         )}
 
-        <div className="pt-2 flex justify-end gap-2">
+        <div className="grid gap-2 pt-2 sm:flex sm:justify-end">
           <button
             type="button"
             onClick={() =>
@@ -893,7 +984,7 @@ const PrayerTimesPage: React.FC = () => {
               savingJamaat ||
               !selectedMasjidId
             }
-            className="px-4 py-2 rounded-lg bg-sky-500 text-sky-950 text-xs font-semibold disabled:opacity-60"
+            className="rounded-md bg-sky-600 px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-60"
           >
             {savingAdhan ? "Saving…" : "Save adhan times"}
           </button>
@@ -903,7 +994,7 @@ const PrayerTimesPage: React.FC = () => {
               void handleSave("jamaat_time", setSavingJamaat, "Jamā‘ah times")
             }
             disabled={savingAdhan || savingJamaat || !selectedMasjidId}
-            className="px-4 py-2 rounded-lg bg-emerald-500 text-emerald-950 text-xs font-semibold disabled:opacity-60"
+            className="rounded-md bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-60"
           >
             {savingJamaat ? "Saving…" : "Save jamā‘ah times"}
           </button>

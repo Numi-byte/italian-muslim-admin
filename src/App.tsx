@@ -53,6 +53,80 @@ type LocationState = {
   from?: string;
 };
 
+const ADMIN_TABS: Record<
+  AdminTab,
+  { label: string; shortLabel: string; description: string; section: string }
+> = {
+  masjids: {
+    label: "Masjids",
+    shortLabel: "Masjids",
+    section: "Manage",
+    description:
+      "Onboard new masjids, manage their profiles and control mobile app visibility.",
+  },
+  ramadan: {
+    label: "Ramadan & Iftar",
+    shortLabel: "Ramadan",
+    section: "Seasonal",
+    description:
+      "Configure Ramadan calendar and booking windows used by the mobile app.",
+  },
+  requests: {
+    label: "Iftar requests",
+    shortLabel: "Requests",
+    section: "Seasonal",
+    description:
+      "Review, approve or reject iftar sponsorship requests from the community.",
+  },
+  prayers: {
+    label: "Daily prayer times",
+    shortLabel: "Prayers",
+    section: "Timings",
+    description:
+      "Set official daily start and jamaah times for each masjid and day.",
+  },
+  jumuah: {
+    label: "Jumuah schedule",
+    shortLabel: "Jumuah",
+    section: "Timings",
+    description:
+      "Manage Friday khutbah and jamaah slots, languages and overflow timings.",
+  },
+  announcements: {
+    label: "Announcements",
+    shortLabel: "News",
+    section: "Publish",
+    description:
+      "Publish official announcements for each masjid: Friday, events, Ramadan and urgent alerts.",
+  },
+  sponsoredAds: {
+    label: "Sponsored ads",
+    shortLabel: "Ads",
+    section: "Publish",
+    description: "Create and schedule sponsored cards for the Prayers page.",
+  },
+  analytics: {
+    label: "User insights",
+    shortLabel: "Insights",
+    section: "Insights",
+    description:
+      "Track installations, active usage, retention, frequency and page time.",
+  },
+};
+
+const FULL_ADMIN_TABS: AdminTab[] = [
+  "masjids",
+  "prayers",
+  "jumuah",
+  "announcements",
+  "ramadan",
+  "requests",
+  "sponsoredAds",
+  "analytics",
+];
+
+const LIMITED_PRAYER_TABS: AdminTab[] = ["prayers"];
+
 // -------------------------
 // Private route wrapper for /admin
 // -------------------------
@@ -137,205 +211,176 @@ const AdminLayout: React.FC = () => {
     isPrayerTimingEditor && !isAdmin ? "prayers" : "masjids"
   );
   const canUseFullAdmin = isAdmin;
+  const availableTabs = canUseFullAdmin ? FULL_ADMIN_TABS : LIMITED_PRAYER_TABS;
+  const activeTab = availableTabs.includes(tab) ? tab : availableTabs[0];
+  const activeMeta = ADMIN_TABS[activeTab];
+  const roleLabel = isAdmin ? "Super admin" : "Jamaah editor";
+  const sections = Array.from(
+    new Set(availableTabs.map((item) => ADMIN_TABS[item].section))
+  );
+
+  const renderPage = () => {
+    if (activeTab === "masjids" && canUseFullAdmin) return <MasjidsAdminPage />;
+    if (activeTab === "ramadan" && canUseFullAdmin) return <RamadanPage />;
+    if (activeTab === "requests" && canUseFullAdmin) return <IftarRequestsPage />;
+    if (activeTab === "prayers") return <PrayerTimesPage />;
+    if (activeTab === "jumuah" && canUseFullAdmin) return <JumuahTimesPage />;
+    if (activeTab === "announcements" && canUseFullAdmin) {
+      return <AnnouncementsPage />;
+    }
+    if (activeTab === "analytics" && canUseFullAdmin) return <AnalyticsPage />;
+    if (activeTab === "sponsoredAds" && canUseFullAdmin) {
+      return <SponsoredAdsPage />;
+    }
+    return <PrayerTimesPage />;
+  };
 
   return (
-    <div className="min-h-screen flex bg-slate-950 text-slate-50">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-800 bg-slate-950/80 backdrop-blur">
-        <div className="h-16 flex items-center px-6 border-b border-slate-800">
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold tracking-[0.25em] text-emerald-400 uppercase">
-              Ummah Way
-            </span>
-            <span className="text-[11px] text-slate-400">Admin Console</span>
+    <div className="min-h-screen bg-slate-100 text-slate-950 lg:flex">
+      <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
+            Ummah Way
           </div>
+          <div className="mt-1 text-xl font-semibold">Admin Console</div>
         </div>
 
-        <nav className="p-4 space-y-1 text-sm">
-          {canUseFullAdmin && (
-            <>
-          {/* Masjids directory / onboarding */}
-          <button
-            type="button"
-            onClick={() => setTab("masjids")}
-            className={`w-full text-left px-3 py-2 rounded-lg ${
-              tab === "masjids"
-                ? "bg-slate-800/90 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            Masjids
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("ramadan")}
-            className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between ${
-              tab === "ramadan"
-                ? "bg-slate-800/90 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            <span>Ramadan & Iftar</span>
-            <span className="text-[10px] uppercase tracking-wide text-emerald-300/70">
-              2026
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("requests")}
-            className={`w-full text-left px-3 py-2 rounded-lg ${
-              tab === "requests"
-                ? "bg-slate-800/90 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            Iftar requests
-          </button>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setTab("prayers")}
-            className={`w-full text-left px-3 py-2 rounded-lg ${
-              tab === "prayers"
-                ? "bg-slate-800/90 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            Daily prayer times
-          </button>
-
-          {canUseFullAdmin && (
-            <>
-          {/* Jumu'ah dedicated tab */}
-          <button
-            type="button"
-            onClick={() => setTab("jumuah")}
-            className={`w-full text-left px-3 py-2 rounded-lg ${
-              tab === "jumuah"
-                ? "bg-slate-800/90 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            Jumuʿah schedule
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("announcements")}
-            className={`w-full text-left px-3 py-2 rounded-lg ${
-              tab === "announcements"
-                ? "bg-slate-800/90 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            Announcements
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab("sponsoredAds")}
-            className={`w-full text-left px-3 py-2 rounded-lg ${
-              tab === "sponsoredAds"
-                ? "bg-slate-800/90 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            Sponsored ads
-          </button>
-
-          <div className="pt-3 border-t border-slate-800/70 mt-2 text-[10px] uppercase tracking-wide text-slate-500">
-            Insights
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setTab("analytics")}
-            className={`mt-1 w-full text-left px-3 py-2 rounded-lg ${
-              tab === "analytics"
-                ? "bg-emerald-500/10 border border-emerald-400/60 text-emerald-300"
-                : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
-            }`}
-          >
-            User insights
-          </button>
-            </>
-          )}
+        <nav className="flex-1 space-y-6 overflow-y-auto px-4 py-5">
+          {sections.map((section) => (
+            <div key={section} className="space-y-1">
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                {section}
+              </div>
+              {availableTabs
+                .filter((item) => ADMIN_TABS[item].section === section)
+                .map((item) => {
+                  const meta = ADMIN_TABS[item];
+                  const selected = item === activeTab;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setTab(item)}
+                      className={`w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                        selected
+                          ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                      }`}
+                    >
+                      <span className="block font-medium">{meta.label}</span>
+                      <span
+                        className={`mt-0.5 block text-[11px] ${
+                          selected ? "text-emerald-700" : "text-slate-400"
+                        }`}
+                      >
+                        {meta.section}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          ))}
         </nav>
+
+        <div className="border-t border-slate-200 p-4">
+          <div className="rounded-lg bg-slate-50 p-3">
+            <div className="truncate text-sm font-medium text-slate-900">
+              {user?.email ?? "admin"}
+            </div>
+            <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+              {roleLabel}
+            </div>
+            <button
+              type="button"
+              onClick={signOut}
+              className="mt-3 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col">
-        <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-950/80 backdrop-blur">
-          <div>
-            <h1 className="text-lg font-semibold text-slate-50">
-              {tab === "masjids" && "Masjid directory & onboarding"}
-              {tab === "ramadan" && "Ramadan & Iftar Sponsorship 2026"}
-              {tab === "requests" && "Iftar sponsorship requests"}
-              {tab === "prayers" && "Daily prayer times"}
-              {tab === "jumuah" && "Jumuʿah timings & Friday slots"}
-              {tab === "announcements" && "Masjid announcements"}
-              {tab === "analytics" && "Live analytics dashboard"}
-              {tab === "sponsoredAds" && "Business sponsorship ads"}
-            </h1>
-            <p className="text-xs text-slate-400">
-              {tab === "masjids" &&
-                "Onboard new masjids, manage their profiles and control which ones are visible in the mobile app."}
-              {tab === "ramadan" &&
-                "Configure Ramadan calendar and booking window used by the mobile app."}
-              {tab === "requests" &&
-                "Review, approve or reject iftar sponsorship requests from the community."}
-              {tab === "prayers" &&
-                "Set official daily start and jamā‘ah times for each masjid and day."}
-              {tab === "jumuah" &&
-                "Manage Jumuʿah khutbah and jamā‘ah slots, languages and overflow timings."}
-              {tab === "announcements" &&
-                "Publish official announcements for each masjid: Jumuʿah, events, Ramadan and urgent alerts."}
-              {tab === "analytics" &&
-                "Track installations, active usage, retention, frequency, and page time for the mobile app."}
-              {tab === "sponsoredAds" &&
-                "Create and schedule sponsored cards for the Prayers page."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 text-xs text-slate-400">
-            <div className="text-right">
-              <div className="text-slate-200 font-medium">
-                {user?.email ?? "admin"}
+      <main className="min-w-0 flex-1">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:hidden">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700">
+                Ummah Way
               </div>
-              <div className="text-[10px] text-emerald-300">
-                {isAdmin ? "super_admin" : "prayer_times_editor"}
+              <div className="truncate text-base font-semibold">
+                {activeMeta.label}
               </div>
             </div>
             <button
               type="button"
               onClick={signOut}
-              className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-100 hover:bg-slate-800"
+              className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
             >
               Logout
             </button>
           </div>
+
+          <div className="overflow-x-auto px-3 pb-3 lg:hidden">
+            <div className="flex min-w-max gap-2">
+              {availableTabs.map((item) => {
+                const meta = ADMIN_TABS[item];
+                const selected = item === activeTab;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setTab(item)}
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold ${
+                      selected
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                        : "border-slate-200 bg-white text-slate-600"
+                    }`}
+                  >
+                    {meta.shortLabel}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="hidden items-center justify-between gap-6 px-8 py-5 lg:flex">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                {activeMeta.section}
+              </div>
+              <h1 className="mt-1 text-2xl font-semibold">{activeMeta.label}</h1>
+              <p className="mt-1 max-w-3xl text-sm text-slate-500">
+                {activeMeta.description}
+              </p>
+            </div>
+            <div className="min-w-52 text-right">
+              <div className="truncate text-sm font-medium text-slate-900">
+                {user?.email ?? "admin"}
+              </div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                {roleLabel}
+              </div>
+            </div>
+          </div>
         </header>
 
-        <section className="flex-1 overflow-y-auto p-6">
-          {tab === "masjids" && canUseFullAdmin && <MasjidsAdminPage />}
-          {tab === "ramadan" && canUseFullAdmin && <RamadanPage />}
-          {tab === "requests" && canUseFullAdmin && <IftarRequestsPage />}
-          {tab === "prayers" && <PrayerTimesPage />}
-          {tab === "jumuah" && canUseFullAdmin && <JumuahTimesPage />}
-          {tab === "announcements" && canUseFullAdmin && <AnnouncementsPage />}
-          {tab === "analytics" && canUseFullAdmin && <AnalyticsPage />}
-          {tab === "sponsoredAds" && canUseFullAdmin && <SponsoredAdsPage />}
+        <section className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8 lg:py-6">
+          <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4 lg:hidden">
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              {activeMeta.section}
+            </div>
+            <p className="mt-1 text-sm text-slate-600">
+              {activeMeta.description}
+            </p>
+          </div>
+          {renderPage()}
         </section>
       </main>
     </div>
   );
 };
 
-// -------------------------
 // App root with routing
 // -------------------------
 
