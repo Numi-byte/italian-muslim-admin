@@ -132,7 +132,8 @@ const LIMITED_PRAYER_TABS: AdminTab[] = ["prayers"];
 // -------------------------
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { loading, session, isAdmin, isPrayerTimingEditor } = useAuth();
+  const { loading, session, isAdmin, isPrayerTimingEditor, signOut } =
+    useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -165,6 +166,13 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
             Your account is not authorized to access the Ummah Way admin
             console.
           </p>
+          <button
+            type="button"
+            onClick={signOut}
+            className="rounded-md bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+          >
+            Logout
+          </button>
         </div>
       </div>
     );
