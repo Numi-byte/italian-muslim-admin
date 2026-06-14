@@ -7,6 +7,9 @@ import { AuthContext, type AuthContextValue, type Profile } from "./authContext"
 import { loadProfile } from "./loadProfile";
 
 const SUPER_ADMIN_USER_ID = "e4d243f9-9b01-42d4-8dec-f1826bfe74ca"; // <-- you
+const PRAYER_TIMING_EDITOR_USER_ID = "24dcca75-577b-4d7d-8177-5932e85170e7";
+const PRAYER_TIMING_EDITOR_MASJID_ID =
+  "4be0c02c-0b29-4c28-8547-f449b49bd619";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -111,6 +114,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Hard override: your user id is always admin
   const isAdmin =
     profile?.role === "super_admin" || user?.id === SUPER_ADMIN_USER_ID;
+  const isPrayerTimingEditor = user?.id === PRAYER_TIMING_EDITOR_USER_ID;
+  const accessiblePrayerMasjidIds = isPrayerTimingEditor
+    ? [PRAYER_TIMING_EDITOR_MASJID_ID]
+    : [];
 
   const value: AuthContextValue = {
     loading,
@@ -118,6 +125,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user,
     profile,
     isAdmin,
+    isPrayerTimingEditor,
+    accessiblePrayerMasjidIds,
     signIn,
     signOut,
   };

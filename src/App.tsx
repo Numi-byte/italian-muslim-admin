@@ -58,7 +58,7 @@ type LocationState = {
 // -------------------------
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { loading, session, isAdmin } = useAuth();
+  const { loading, session, isAdmin, isPrayerTimingEditor } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -82,16 +82,14 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isPrayerTimingEditor) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50">
         <div className="max-w-md text-center space-y-4 text-xs">
           <h1 className="text-lg font-semibold">Access denied</h1>
           <p className="text-slate-400">
             Your account is not authorized to access the Ummah Way admin
-            console. Only profiles with role{" "}
-            <span className="font-mono text-emerald-300">super_admin</span> are
-            allowed.
+            console.
           </p>
         </div>
       </div>
@@ -134,8 +132,11 @@ const LoginRoute: React.FC = () => {
 // -------------------------
 
 const AdminLayout: React.FC = () => {
-  const { signOut, user } = useAuth();
-  const [tab, setTab] = useState<AdminTab>("masjids");
+  const { signOut, user, isAdmin, isPrayerTimingEditor } = useAuth();
+  const [tab, setTab] = useState<AdminTab>(() =>
+    isPrayerTimingEditor && !isAdmin ? "prayers" : "masjids"
+  );
+  const canUseFullAdmin = isAdmin;
 
   return (
     <div className="min-h-screen flex bg-slate-950 text-slate-50">
@@ -151,6 +152,8 @@ const AdminLayout: React.FC = () => {
         </div>
 
         <nav className="p-4 space-y-1 text-sm">
+          {canUseFullAdmin && (
+            <>
           {/* Masjids directory / onboarding */}
           <button
             type="button"
@@ -190,6 +193,8 @@ const AdminLayout: React.FC = () => {
           >
             Iftar requests
           </button>
+            </>
+          )}
 
           <button
             type="button"
@@ -203,6 +208,8 @@ const AdminLayout: React.FC = () => {
             Daily prayer times
           </button>
 
+          {canUseFullAdmin && (
+            <>
           {/* Jumu'ah dedicated tab */}
           <button
             type="button"
@@ -255,6 +262,8 @@ const AdminLayout: React.FC = () => {
           >
             User insights
           </button>
+            </>
+          )}
         </nav>
       </aside>
 
@@ -297,7 +306,9 @@ const AdminLayout: React.FC = () => {
               <div className="text-slate-200 font-medium">
                 {user?.email ?? "admin"}
               </div>
-              <div className="text-[10px] text-emerald-300">super_admin</div>
+              <div className="text-[10px] text-emerald-300">
+                {isAdmin ? "super_admin" : "prayer_times_editor"}
+              </div>
             </div>
             <button
               type="button"
@@ -310,14 +321,14 @@ const AdminLayout: React.FC = () => {
         </header>
 
         <section className="flex-1 overflow-y-auto p-6">
-          {tab === "masjids" && <MasjidsAdminPage />}
-          {tab === "ramadan" && <RamadanPage />}
-          {tab === "requests" && <IftarRequestsPage />}
+          {tab === "masjids" && canUseFullAdmin && <MasjidsAdminPage />}
+          {tab === "ramadan" && canUseFullAdmin && <RamadanPage />}
+          {tab === "requests" && canUseFullAdmin && <IftarRequestsPage />}
           {tab === "prayers" && <PrayerTimesPage />}
-          {tab === "jumuah" && <JumuahTimesPage />}
-          {tab === "announcements" && <AnnouncementsPage />}
-          {tab === "analytics" && <AnalyticsPage />}
-          {tab === "sponsoredAds" && <SponsoredAdsPage />}
+          {tab === "jumuah" && canUseFullAdmin && <JumuahTimesPage />}
+          {tab === "announcements" && canUseFullAdmin && <AnnouncementsPage />}
+          {tab === "analytics" && canUseFullAdmin && <AnalyticsPage />}
+          {tab === "sponsoredAds" && canUseFullAdmin && <SponsoredAdsPage />}
         </section>
       </main>
     </div>

@@ -13,6 +13,8 @@ export type AuthContextValue = {
   user: User | null;
   profile: Profile | null;
   isAdmin: boolean;
+  isPrayerTimingEditor: boolean;
+  accessiblePrayerMasjidIds: string[];
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 };

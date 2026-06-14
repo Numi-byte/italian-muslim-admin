@@ -1,6 +1,7 @@
 // src/pages/PrayerTimesPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../auth/authContext";
 
 type Masjid = {
   id: string;
@@ -49,6 +50,8 @@ const getTodayIsoRome = (): string => {
 };
 
 const PrayerTimesPage: React.FC = () => {
+  const { isAdmin, isPrayerTimingEditor, accessiblePrayerMasjidIds } =
+    useAuth();
   const [masjids, setMasjids] = useState<Masjid[]>([]);
   const [selectedMasjidId, setSelectedMasjidId] = useState<string | null>(null);
 
@@ -73,6 +76,7 @@ const PrayerTimesPage: React.FC = () => {
   const [selectedCityMasjidIds, setSelectedCityMasjidIds] = useState<string[]>(
     []
   );
+  const isLimitedPrayerEditor = isPrayerTimingEditor && !isAdmin;
 
   const selectedMasjid = useMemo(
     () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
@@ -107,10 +111,21 @@ const PrayerTimesPage: React.FC = () => {
         console.error("Error loading masjids", error);
         setMasjids([]);
       } else if (data) {
-        const masjidRows = data as Masjid[];
+        const allMasjidRows = data as Masjid[];
+        const masjidRows = isLimitedPrayerEditor
+          ? allMasjidRows.filter((masjid) =>
+              accessiblePrayerMasjidIds.includes(masjid.id)
+            )
+          : allMasjidRows;
         setMasjids(masjidRows);
         if (masjidRows.length > 0) {
-          setSelectedMasjidId((prev) => prev ?? masjidRows[0].id);
+          setSelectedMasjidId((prev) =>
+            prev && masjidRows.some((masjid) => masjid.id === prev)
+              ? prev
+              : masjidRows[0].id
+          );
+        } else {
+          setSelectedMasjidId(null);
         }
       }
 
@@ -118,7 +133,7 @@ const PrayerTimesPage: React.FC = () => {
     };
 
     void loadMasjids();
-  }, []);
+  }, [accessiblePrayerMasjidIds, isLimitedPrayerEditor]);
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -379,13 +394,15 @@ const PrayerTimesPage: React.FC = () => {
               date: r.date,
               prayer: r.prayer,
               [field]: `${r[field]}:00`,
-              ...(r.prayer === "asr"
-                ? buildAsrTimingPayload(r)
-                : {
-                    start_time: r.start_time ? `${r.start_time}:00` : null,
-                    asr_start_time_shafi: null,
-                    asr_start_time_hanafi: null,
-                  }),
+              ...(isLimitedPrayerEditor
+                ? {}
+                : r.prayer === "asr"
+                  ? buildAsrTimingPayload(r)
+                  : {
+                      start_time: r.start_time ? `${r.start_time}:00` : null,
+                      asr_start_time_shafi: null,
+                      asr_start_time_hanafi: null,
+                    }),
             }));
 
     setSaving(true);
@@ -659,7 +676,12 @@ const PrayerTimesPage: React.FC = () => {
             <button
               type="button"
               onClick={() => void handleCopyFromPreviousDay("both")}
-              disabled={!selectedMasjidId || !selectedDate || loadingPrayers}
+              disabled={
+                isLimitedPrayerEditor ||
+                !selectedMasjidId ||
+                !selectedDate ||
+                loadingPrayers
+              }
               className="text-[11px] px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800 disabled:opacity-50"
             >
               Copy from previous day
@@ -675,7 +697,9 @@ const PrayerTimesPage: React.FC = () => {
             <button
               type="button"
               onClick={handleClearAllLocal}
-              disabled={!selectedMasjidId || rows.length === 0}
+              disabled={
+                isLimitedPrayerEditor || !selectedMasjidId || rows.length === 0
+              }
               className="text-[11px] px-3 py-1.5 rounded-full border border-red-500/70 bg-red-500/5 text-red-200 hover:bg-red-500/20 disabled:opacity-40"
             >
               Clear all (this day)
@@ -683,7 +707,7 @@ const PrayerTimesPage: React.FC = () => {
           </div>
         </div>
 
-        {selectedMasjid && sameCityMasjids.length > 0 && (
+        {!isLimitedPrayerEditor && selectedMasjid && sameCityMasjids.length > 0 && (
           <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 space-y-3">
             <div className="flex flex-col gap-1">
               <p className="text-xs font-semibold text-slate-100">
@@ -754,6 +778,12 @@ const PrayerTimesPage: React.FC = () => {
           </div>
         )}
 
+        {isLimitedPrayerEditor && (
+          <div className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+            This account can edit only jamā‘ah times for this masjid.
+          </div>
+        )}
+
         {loadingPrayers ? (
           <div className="text-xs text-slate-400">Loading prayer times…</div>
         ) : rows.length === 0 ? (
@@ -792,6 +822,7 @@ const PrayerTimesPage: React.FC = () => {
                               asr_start_time_shafi: e.target.value,
                             })
                           }
+                          disabled={isLimitedPrayerEditor}
                           className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
                         />
                       </div>
@@ -807,6 +838,7 @@ const PrayerTimesPage: React.FC = () => {
                               asr_start_time_hanafi: e.target.value,
                             })
                           }
+                          disabled={isLimitedPrayerEditor}
                           className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
                         />
                       </div>
@@ -822,6 +854,7 @@ const PrayerTimesPage: React.FC = () => {
                         onChange={(e) =>
                           updateRow(row.prayer, { start_time: e.target.value })
                         }
+                        disabled={isLimitedPrayerEditor}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100 text-xs"
                       />
                     </div>
@@ -854,7 +887,12 @@ const PrayerTimesPage: React.FC = () => {
             onClick={() =>
               void handleSave("start_time", setSavingAdhan, "Adhan times")
             }
-            disabled={savingAdhan || savingJamaat || !selectedMasjidId}
+            disabled={
+              isLimitedPrayerEditor ||
+              savingAdhan ||
+              savingJamaat ||
+              !selectedMasjidId
+            }
             className="px-4 py-2 rounded-lg bg-sky-500 text-sky-950 text-xs font-semibold disabled:opacity-60"
           >
             {savingAdhan ? "Saving…" : "Save adhan times"}
