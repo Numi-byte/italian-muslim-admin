@@ -9,8 +9,22 @@ stable
 security definer
 set search_path = public
 as $$
-  select auth.uid() = '24dcca75-577b-4d7d-8177-5932e85170e7'::uuid
-    and target_masjid_id = '4be0c02c-0b29-4c28-8547-f449b49bd619'::uuid;
+  select exists (
+    select 1
+    from (
+      values
+        (
+          '24dcca75-577b-4d7d-8177-5932e85170e7'::uuid,
+          '4be0c02c-0b29-4c28-8547-f449b49bd619'::uuid
+        ),
+        (
+          'f9bdb476-5715-471f-b276-102bcf8af214'::uuid,
+          '65667aba-156a-4815-9107-b76aec55e7a3'::uuid
+        )
+    ) as allowed(user_id, masjid_id)
+    where allowed.user_id = auth.uid()
+      and allowed.masjid_id = target_masjid_id
+  );
 $$;
 
 grant execute on function public.can_edit_limited_jamaat_times(uuid)
@@ -23,7 +37,10 @@ stable
 security definer
 set search_path = public
 as $$
-  select auth.uid() = '24dcca75-577b-4d7d-8177-5932e85170e7'::uuid;
+  select auth.uid() in (
+    '24dcca75-577b-4d7d-8177-5932e85170e7'::uuid,
+    'f9bdb476-5715-471f-b276-102bcf8af214'::uuid
+  );
 $$;
 
 grant execute on function public.is_limited_jamaat_editor()
