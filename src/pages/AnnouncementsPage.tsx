@@ -625,6 +625,10 @@ const AnnouncementsPage: React.FC = () => {
                   className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm resize-none"
                   placeholder="Full announcement text as it should appear in the app…"
                 />
+                <p className="text-[10px] text-slate-500">
+                  Paste links with https:// or www. and they will be clickable on
+                  the public masjid page.
+                </p>
               </div>
 
               {/* Category + pinned */}

@@ -84,6 +84,74 @@ function isJumuahActive(row: JumuahRow, today: string) {
   return true;
 }
 
+function splitTrailingPunctuation(value: string) {
+  const match = value.match(/^(.+?)([.,!?;:)]*)$/);
+  return {
+    text: match?.[1] ?? value,
+    trailing: match?.[2] ?? "",
+  };
+}
+
+function getSafeUrl(value: string) {
+  const href = value.startsWith("www.") ? `https://${value}` : value;
+  return href.startsWith("http://") || href.startsWith("https://")
+    ? href
+    : null;
+}
+
+function renderLinkedText(text: string) {
+  const urlPattern = /(?:https?:\/\/|www\.)[^\s<]+/gi;
+  const nodes: React.ReactNode[] = [];
+  let key = 0;
+
+  text.split("\n").forEach((line, lineIndex) => {
+    if (lineIndex > 0) {
+      nodes.push(<br key={`br-${lineIndex}`} />);
+    }
+
+    let lastIndex = 0;
+
+    for (const match of line.matchAll(urlPattern)) {
+      const rawUrl = match[0];
+      const index = match.index ?? 0;
+      const { text: linkText, trailing } = splitTrailingPunctuation(rawUrl);
+      const href = getSafeUrl(linkText);
+
+      if (index > lastIndex) {
+        nodes.push(line.slice(lastIndex, index));
+      }
+
+      if (href) {
+        nodes.push(
+          <a
+            key={`link-${key++}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-[#71e49b] underline decoration-[#71e49b]/45 underline-offset-4 hover:text-white"
+          >
+            {linkText}
+          </a>
+        );
+      } else {
+        nodes.push(linkText);
+      }
+
+      if (trailing) {
+        nodes.push(trailing);
+      }
+
+      lastIndex = index + rawUrl.length;
+    }
+
+    if (lastIndex < line.length) {
+      nodes.push(line.slice(lastIndex));
+    }
+  });
+
+  return nodes;
+}
+
 const MasjidPublicPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const today = useMemo(() => getTodayIso(), []);
@@ -403,7 +471,7 @@ const MasjidPublicPage: React.FC = () => {
                       </span>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-white/60">
-                      {row.body}
+                      {renderLinkedText(row.body)}
                     </p>
                   </article>
                 ))
