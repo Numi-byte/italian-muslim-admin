@@ -1,3 +1,20 @@
+# UmmahWay Admin
+
+## Environment Security
+
+Client-side Vite variables must only contain public values:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Server-only variables must not use the `VITE_` prefix:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- optional `SUPABASE_URL` if different from `VITE_SUPABASE_URL`
+
+Never configure `VITE_SUPABASE_SERVICE_ROLE_KEY` locally or in Vercel. Vite
+can expose `VITE_` variables to browser code.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

@@ -4,8 +4,17 @@
 -- sponsored ads are managed only by the admin app's super_admin user.
 --
 -- Public behavior preserved:
--- - anyone can submit a business sponsorship application
+-- - the website submits business sponsorship applications through the
+--   server-only /api/business-sponsorship route
 -- - anyone can read currently active prayer-page sponsored ads
+
+alter table public.business_sponsorship_applications
+  add column if not exists submitted_by uuid references auth.users(id) on delete set null,
+  add column if not exists notification_sent_at timestamptz,
+  add column if not exists last_notification_error text;
+
+alter table public.business_sponsorship_applications enable row level security;
+alter table public.prayer_sponsored_ads enable row level security;
 
 create or replace function public.is_ummahway_super_admin()
 returns boolean
@@ -28,11 +37,21 @@ grant execute on function public.is_ummahway_super_admin() to authenticated;
 
 drop policy if exists "Anyone can submit sponsorship applications"
   on public.business_sponsorship_applications;
-create policy "Anyone can submit sponsorship applications"
+drop policy if exists "Authenticated users can submit own sponsorship applications"
+  on public.business_sponsorship_applications;
+create policy "Authenticated users can submit own sponsorship applications"
   on public.business_sponsorship_applications
   for insert
-  to anon, authenticated
-  with check (true);
+  to authenticated
+  with check (
+    submitted_by = auth.uid()
+    and status = 'new'
+    and internal_notes is null
+    and reviewed_at is null
+    and reviewed_by is null
+    and notification_sent_at is null
+    and last_notification_error is null
+  );
 
 drop policy if exists "Super admin can manage sponsorship applications"
   on public.business_sponsorship_applications;

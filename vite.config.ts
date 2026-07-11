@@ -19,9 +19,7 @@ function analyticsApiPlugin(mode: string): Plugin {
       setProcessEnv(
         "SUPABASE_SERVICE_ROLE_KEY",
         env.SUPABASE_SERVICE_ROLE_KEY ??
-          env.VITE_SUPABASE_SERVICE_ROLE_KEY ??
-          process.env.SUPABASE_SERVICE_ROLE_KEY ??
-          process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+          process.env.SUPABASE_SERVICE_ROLE_KEY
       );
 
       server.middlewares.use("/api/analytics", async (request, response) => {
@@ -38,6 +36,29 @@ function analyticsApiPlugin(mode: string): Plugin {
           );
         }
       });
+
+      server.middlewares.use(
+        "/api/business-sponsorship",
+        async (request, response) => {
+          const { default: sponsorshipHandler } = await import(
+            "./api/business-sponsorship"
+          );
+
+          try {
+            await sponsorshipHandler(request, response);
+          } catch (error) {
+            console.error("[Vite] sponsorship API failed", error);
+            response.statusCode = 500;
+            response.setHeader("Content-Type", "application/json");
+            response.end(
+              JSON.stringify({
+                error:
+                  "Local sponsorship API failed. Check the dev server logs.",
+              })
+            );
+          }
+        }
+      );
     },
   };
 }

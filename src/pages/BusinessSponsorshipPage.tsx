@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
 
 type FormState = {
   business_name: string;
@@ -17,10 +16,7 @@ type FormState = {
   notes: string;
 };
 
-type Payload = FormState & {
-  source: "website";
-  status: "new";
-};
+type Payload = FormState;
 
 const initialForm: FormState = {
   business_name: "",
@@ -92,33 +88,23 @@ const BusinessSponsorshipPage: React.FC = () => {
       budget_range: form.budget_range.trim(),
       preferred_duration: form.preferred_duration.trim(),
       notes: form.notes.trim(),
-      source: "website",
-      status: "new",
     };
 
     setSubmitting(true);
     try {
-      const { data, error } = await supabase
-        .from("business_sponsorship_applications")
-        .insert(payload)
-        .select("id")
-        .single();
+      const response = await fetch("/api/business-sponsorship", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
-      if (error) {
-        setMessage(error.message);
-        setMessageType("error");
-        return;
-      }
-
-      const { error: functionError } = await supabase.functions.invoke(
-        "business-sponsorship-request",
-        {
-          body: { ...payload, id: data?.id },
-        }
-      );
-
-      if (functionError) {
-        setMessage(functionError.message);
+      if (!response.ok) {
+        setMessage(result?.error ?? "Could not submit application.");
         setMessageType("error");
         return;
       }

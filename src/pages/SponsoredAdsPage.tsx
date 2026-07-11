@@ -359,7 +359,7 @@ const SponsoredAdsPage: React.FC = () => {
     };
   };
 
-  const useApplicationForAd = (app: SponsorshipApplication) => {
+  const applyApplicationForAd = (app: SponsorshipApplication) => {
     const subtitle =
       app.offer_type ||
       app.business_category ||
@@ -886,7 +886,7 @@ const SponsoredAdsPage: React.FC = () => {
                   <button
                     key={app.id}
                     type="button"
-                    onClick={() => useApplicationForAd(app)}
+                    onClick={() => applyApplicationForAd(app)}
                     className={`w-full rounded-lg border p-3 text-left hover:bg-slate-900 ${
                       form.application_id === app.id
                         ? "border-emerald-500/70 bg-emerald-500/10"

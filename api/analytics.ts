@@ -13,10 +13,7 @@ function getAdminClient() {
   const supabaseUrl = cleanEnvValue(
     process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
   );
-  const serviceRoleKey = cleanEnvValue(
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-      process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-  );
+  const serviceRoleKey = cleanEnvValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   if (!supabaseUrl || !serviceRoleKey) return null;
 
@@ -141,7 +138,7 @@ export default async function handler(
 
   if (firstError) {
     console.error("[Analytics API] Supabase query failed", firstError);
-    sendJson(response, 500, { error: firstError.message });
+    sendJson(response, 500, { error: "Analytics query failed." });
     return;
   }
 
