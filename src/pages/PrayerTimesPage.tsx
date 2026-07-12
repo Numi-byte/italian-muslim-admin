@@ -7,6 +7,12 @@ type Masjid = {
   id: string;
   official_name: string;
   city: string;
+  region: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type PrayerKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
@@ -33,6 +39,51 @@ type PrayerTimeDbRow = {
   jamaat_time: string | null; // "HH:MM:SS"
 };
 
+type AlAdhanTimingKey = "Fajr" | "Dhuhr" | "Asr" | "Maghrib" | "Isha";
+
+type AlAdhanTimings = Partial<Record<AlAdhanTimingKey, string>>;
+
+type AlAdhanTimingsResponse = {
+  code?: number;
+  status?: string;
+  data?: {
+    timings?: AlAdhanTimings;
+  };
+};
+
+type ImportedAdhanDay = {
+  date: string;
+  fajr: string;
+  dhuhr: string;
+  asrShafi: string;
+  asrHanafi: string;
+  maghrib: string;
+  isha: string;
+};
+
+type MasjidLocationSource =
+  | {
+      type: "coordinates";
+      latitude: number;
+      longitude: number;
+      label: string;
+    }
+  | {
+      type: "city";
+      city: string;
+      country: string;
+      label: string;
+    };
+
+type AdhanImportPayloadRow = {
+  masjid_id: string;
+  date: string;
+  prayer: PrayerKey;
+  start_time: string;
+  asr_start_time_shafi: string | null;
+  asr_start_time_hanafi: string | null;
+};
+
 const PRAYERS: { key: PrayerKey; label: string }[] = [
   { key: "fajr", label: "Fajr" },
   { key: "dhuhr", label: "Dhuhr" },
@@ -40,6 +91,10 @@ const PRAYERS: { key: PrayerKey; label: string }[] = [
   { key: "maghrib", label: "Maghrib" },
   { key: "isha", label: "Isha" },
 ];
+
+const DEFAULT_IMPORT_COUNTRY = "Italy";
+const MUSLIM_WORLD_LEAGUE_METHOD_ID = 3;
+const WEEK_IMPORT_DAYS = 7;
 
 const getTodayIsoRome = (): string => {
   const now = new Date();
@@ -49,11 +104,206 @@ const getTodayIsoRome = (): string => {
   return iso;
 };
 
+const isoDateToUtcDate = (isoDate: string): Date => {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
 const shiftIsoDate = (isoDate: string, deltaDays: number): string => {
-  const date = new Date(`${isoDate}T00:00:00`);
-  date.setDate(date.getDate() + deltaDays);
+  const date = isoDateToUtcDate(isoDate);
+  date.setUTCDate(date.getUTCDate() + deltaDays);
   return date.toISOString().slice(0, 10);
 };
+
+const formatAlAdhanDate = (isoDate: string): string => {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}-${month}-${year}`;
+};
+
+const parseApiTime = (value: string | undefined): string | null => {
+  const match = value?.match(/\b([0-2]\d):([0-5]\d)\b/);
+  const hour = match?.[1];
+  const minute = match?.[2];
+  return hour && minute ? `${hour}:${minute}` : null;
+};
+
+const wait = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const requirePrayerTime = (
+  timings: AlAdhanTimings | undefined,
+  key: AlAdhanTimingKey,
+  date: string
+): string => {
+  const time = parseApiTime(timings?.[key]);
+  if (!time) {
+    throw new Error(`AlAdhan did not return a valid ${key} time for ${date}.`);
+  }
+  return time;
+};
+
+const getMasjidLocationSource = (masjid: Masjid): MasjidLocationSource => {
+  if (
+    typeof masjid.latitude === "number" &&
+    typeof masjid.longitude === "number" &&
+    Number.isFinite(masjid.latitude) &&
+    Number.isFinite(masjid.longitude)
+  ) {
+    return {
+      type: "coordinates",
+      latitude: masjid.latitude,
+      longitude: masjid.longitude,
+      label: `${masjid.latitude.toFixed(5)}, ${masjid.longitude.toFixed(5)}`,
+    };
+  }
+
+  const city = masjid.city.trim();
+  const locationParts = [city, masjid.region, DEFAULT_IMPORT_COUNTRY].filter(
+    Boolean
+  );
+
+  return {
+    type: "city",
+    city,
+    country: DEFAULT_IMPORT_COUNTRY,
+    label: locationParts.join(", "),
+  };
+};
+
+const fetchMasjidTimings = async (
+  date: string,
+  school: 0 | 1,
+  location: MasjidLocationSource
+) => {
+  const url =
+    location.type === "coordinates"
+      ? new URL(`https://api.aladhan.com/v1/timings/${formatAlAdhanDate(date)}`)
+      : new URL(
+          `https://api.aladhan.com/v1/timingsByCity/${formatAlAdhanDate(date)}`
+        );
+
+  if (location.type === "coordinates") {
+    url.searchParams.set("latitude", String(location.latitude));
+    url.searchParams.set("longitude", String(location.longitude));
+  } else {
+    url.searchParams.set("city", location.city);
+    url.searchParams.set("country", location.country);
+  }
+
+  url.searchParams.set("method", String(MUSLIM_WORLD_LEAGUE_METHOD_ID));
+  url.searchParams.set("school", String(school));
+
+  let payload: AlAdhanTimingsResponse | null = null;
+  let lastError: string | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(url.toString());
+
+      if (response.ok) {
+        payload = (await response.json()) as AlAdhanTimingsResponse;
+        break;
+      }
+
+      lastError = `AlAdhan returned ${response.status} for ${location.label} on ${date}.`;
+      if (response.status !== 429 && response.status < 500) break;
+    } catch (error) {
+      lastError =
+        error instanceof Error
+          ? error.message
+          : `AlAdhan request failed for ${location.label} on ${date}.`;
+    }
+
+    await wait(700 * (attempt + 1));
+  }
+
+  if (!payload) {
+    throw new Error(
+      lastError ?? `AlAdhan request failed for ${location.label} on ${date}.`
+    );
+  }
+
+  if (payload.code !== 200 || !payload.data?.timings) {
+    throw new Error(`AlAdhan returned no timings for ${date}.`);
+  }
+
+  return payload.data.timings;
+};
+
+const fetchMasjidMwlWeek = async (
+  dates: string[],
+  location: MasjidLocationSource
+): Promise<ImportedAdhanDay[]> => {
+  const importedDays: ImportedAdhanDay[] = [];
+
+  for (const date of dates) {
+    const shafiTimings = await fetchMasjidTimings(date, 0, location);
+    const hanafiTimings = await fetchMasjidTimings(date, 1, location);
+
+    importedDays.push({
+      date,
+      fajr: requirePrayerTime(shafiTimings, "Fajr", date),
+      dhuhr: requirePrayerTime(shafiTimings, "Dhuhr", date),
+      asrShafi: requirePrayerTime(shafiTimings, "Asr", date),
+      asrHanafi: requirePrayerTime(hanafiTimings, "Asr", date),
+      maghrib: requirePrayerTime(shafiTimings, "Maghrib", date),
+      isha: requirePrayerTime(shafiTimings, "Isha", date),
+    });
+
+    await wait(150);
+  }
+
+  return importedDays;
+};
+
+const withSeconds = (time: string): string => `${time}:00`;
+
+const buildAdhanImportPayload = (
+  masjidId: string,
+  week: ImportedAdhanDay[]
+): AdhanImportPayloadRow[] =>
+  week.flatMap((day) => [
+    {
+      masjid_id: masjidId,
+      date: day.date,
+      prayer: "fajr",
+      start_time: withSeconds(day.fajr),
+      asr_start_time_shafi: null,
+      asr_start_time_hanafi: null,
+    },
+    {
+      masjid_id: masjidId,
+      date: day.date,
+      prayer: "dhuhr",
+      start_time: withSeconds(day.dhuhr),
+      asr_start_time_shafi: null,
+      asr_start_time_hanafi: null,
+    },
+    {
+      masjid_id: masjidId,
+      date: day.date,
+      prayer: "asr",
+      start_time: withSeconds(day.asrShafi),
+      asr_start_time_shafi: withSeconds(day.asrShafi),
+      asr_start_time_hanafi: withSeconds(day.asrHanafi),
+    },
+    {
+      masjid_id: masjidId,
+      date: day.date,
+      prayer: "maghrib",
+      start_time: withSeconds(day.maghrib),
+      asr_start_time_shafi: null,
+      asr_start_time_hanafi: null,
+    },
+    {
+      masjid_id: masjidId,
+      date: day.date,
+      prayer: "isha",
+      start_time: withSeconds(day.isha),
+      asr_start_time_shafi: null,
+      asr_start_time_hanafi: null,
+    },
+  ]);
 
 const formatDayLabel = (isoDate: string): string =>
   new Intl.DateTimeFormat("en-GB", {
@@ -86,6 +336,7 @@ const PrayerTimesPage: React.FC = () => {
   const [savingAdhan, setSavingAdhan] = useState(false);
   const [savingJamaat, setSavingJamaat] = useState(false);
   const [applyingCityAdhan, setApplyingCityAdhan] = useState(false);
+  const [importingMasjidAdhan, setImportingMasjidAdhan] = useState(false);
 
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error" | null>(
@@ -102,6 +353,17 @@ const PrayerTimesPage: React.FC = () => {
   const selectedMasjid = useMemo(
     () => masjids.find((m) => m.id === selectedMasjidId) ?? null,
     [masjids, selectedMasjidId]
+  );
+
+  const selectedMasjidImportLocation = useMemo(
+    () => (selectedMasjid ? getMasjidLocationSource(selectedMasjid) : null),
+    [selectedMasjid]
+  );
+
+  const weeklyImportEndDate = useMemo(
+    () =>
+      selectedDate ? shiftIsoDate(selectedDate, WEEK_IMPORT_DAYS - 1) : "",
+    [selectedDate]
   );
 
   const daySelectorDays = useMemo(
@@ -137,16 +399,43 @@ const PrayerTimesPage: React.FC = () => {
     const loadMasjids = async () => {
       setLoadingMasjids(true);
 
-      const { data, error } = await supabase
+      const locationResult = await supabase
         .from("public_masjids")
-        .select("id, official_name, city")
+        .select(
+          "id, official_name, city, region, address_line1, address_line2, postal_code, latitude, longitude"
+        )
         .order("city", { ascending: true });
+      let data = locationResult.data as Partial<Masjid>[] | null;
+      let error = locationResult.error;
+
+      if (error) {
+        console.warn(
+          "Could not load masjid coordinates from public_masjids; falling back to city lookup.",
+          error
+        );
+        const fallbackResult = await supabase
+          .from("public_masjids")
+          .select("id, official_name, city")
+          .order("city", { ascending: true });
+        data = fallbackResult.data as Partial<Masjid>[] | null;
+        error = fallbackResult.error;
+      }
 
       if (error) {
         console.error("Error loading masjids", error);
         setMasjids([]);
       } else if (data) {
-        const allMasjidRows = data as Masjid[];
+        const allMasjidRows = data.map((row) => ({
+          id: row.id ?? "",
+          official_name: row.official_name ?? "",
+          city: row.city ?? "",
+          region: row.region ?? null,
+          address_line1: row.address_line1 ?? null,
+          address_line2: row.address_line2 ?? null,
+          postal_code: row.postal_code ?? null,
+          latitude: row.latitude ?? null,
+          longitude: row.longitude ?? null,
+        }));
         const masjidRows = isLimitedPrayerEditor
           ? allMasjidRows.filter((masjid) =>
               accessiblePrayerMasjidIds.includes(masjid.id)
@@ -587,6 +876,80 @@ const PrayerTimesPage: React.FC = () => {
     setMessageType("success");
   };
 
+  const handleImportMasjidMwlWeek = async () => {
+    if (!selectedDate || !selectedMasjid || !selectedMasjidImportLocation) {
+      return;
+    }
+
+    if (
+      selectedMasjidImportLocation.type === "city" &&
+      !selectedMasjidImportLocation.city
+    ) {
+      setMessage(
+        "This masjid needs coordinates or a city before importing adhan times."
+      );
+      setMessageType("error");
+      return;
+    }
+
+    const dates = Array.from({ length: WEEK_IMPORT_DAYS }, (_, index) =>
+      shiftIsoDate(selectedDate, index)
+    );
+
+    setImportingMasjidAdhan(true);
+    setMessage(null);
+    setMessageType(null);
+
+    try {
+      const week = await fetchMasjidMwlWeek(
+        dates,
+        selectedMasjidImportLocation
+      );
+      const payload = buildAdhanImportPayload(selectedMasjid.id, week);
+
+      const { error } = await supabase.from("masjid_prayer_times").upsert(
+        payload,
+        {
+          onConflict: "masjid_id,date,prayer",
+        }
+      );
+
+      if (error) {
+        console.error("Error importing masjid MWL adhan week", error);
+        setMessage(error.message);
+        setMessageType("error");
+        return;
+      }
+
+      await loadPrayerTimes(selectedMasjid.id, selectedDate);
+
+      setMessage(
+        `Imported MWL adhan times for ${selectedMasjid.official_name} (${
+          selectedMasjidImportLocation.label
+        }) from ${dates[0]} to ${
+          dates[dates.length - 1]
+        }. Jamaah times were not changed.`
+      );
+      setMessageType("success");
+      setLastSavedAt(
+        new Date().toLocaleTimeString("it-IT", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+    } catch (error) {
+      console.error("Error fetching masjid MWL adhan week", error);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not import adhan times for this masjid."
+      );
+      setMessageType("error");
+    } finally {
+      setImportingMasjidAdhan(false);
+    }
+  };
+
   // ---------------------------------------------------------------------------
   // UI
   // ---------------------------------------------------------------------------
@@ -764,6 +1127,27 @@ const PrayerTimesPage: React.FC = () => {
             )}
           </div>
           <div className="grid gap-2 sm:flex sm:items-center">
+            <button
+              type="button"
+              onClick={() => void handleImportMasjidMwlWeek()}
+              disabled={
+                isLimitedPrayerEditor ||
+                importingMasjidAdhan ||
+                savingAdhan ||
+                savingJamaat ||
+                applyingCityAdhan ||
+                !selectedDate ||
+                !selectedMasjid
+              }
+              title={
+                selectedMasjid && selectedMasjidImportLocation
+                  ? `Imports ${selectedDate} to ${weeklyImportEndDate} using ${selectedMasjidImportLocation.label}.`
+                  : "Select a masjid before importing."
+              }
+              className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-2 text-[11px] font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+            >
+              {importingMasjidAdhan ? "Importing..." : "Import MWL week"}
+            </button>
             <button
               type="button"
               onClick={() => void handleCopyFromPreviousDay("both")}
