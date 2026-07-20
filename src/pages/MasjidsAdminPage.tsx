@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Spinner,
+} from "../components/ui";
+import { MosqueIcon, CloseIcon } from "../components/icons";
 
 type MasjidRow = {
   id: string;
@@ -297,151 +307,119 @@ const MasjidsAdminPage: React.FC = () => {
   // --------------------------------------------------
   // Render
   // --------------------------------------------------
+  const activeCount = rows.filter((r) => r.is_active).length;
+
+  const inputCls =
+    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15";
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-950">
-          Masjid directory
-        </h2>
-        <p className="text-sm text-slate-500">
-          Onboard new masjids, update details and control which ones are
-          visible in the app.
-        </p>
-      </div>
+      {error && <Alert tone="error">{error}</Alert>}
+      {successMsg && <Alert tone="success">{successMsg}</Alert>}
 
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 text-xs text-red-800 px-3 py-2">
-          {error}
-        </div>
-      )}
-
-      {successMsg && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 text-xs text-emerald-800 px-3 py-2">
-          {successMsg}
-        </div>
-      )}
-
-      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-white text-xs shadow-sm">
-        {/* Header bar */}
-        <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-slate-950">Masjids</span>
-            {loading && (
-              <span className="text-[11px] text-slate-500">Loading…</span>
-            )}
+      <Card className="overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-slate-900">
+              Masjid directory
+            </span>
+            <Badge tone="emerald">{rows.length} total</Badge>
+            <Badge tone="slate">{activeCount} active</Badge>
+            {loading && <Spinner />}
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="rounded-md bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-800"
-            >
-              + Add masjid
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleRefresh()}
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-            >
+            <Button size="sm" variant="secondary" onClick={() => void handleRefresh()}>
               Refresh
-            </button>
+            </Button>
+            <Button size="sm" onClick={openCreateForm}>
+              + Add masjid
+            </Button>
           </div>
         </div>
 
         {rows.length === 0 ? (
-          <div className="p-4 text-slate-500">
-            No masjids yet. Use{" "}
-            <span className="font-semibold text-slate-800">
-              &ldquo;Add masjid&rdquo;
-            </span>{" "}
-            to onboard your first one.
+          <div className="p-6">
+            <EmptyState
+              icon={<MosqueIcon />}
+              title="No masjids yet"
+              description="Use “Add masjid” to onboard your first community and make it visible in the app."
+              action={<Button size="sm" onClick={openCreateForm}>+ Add masjid</Button>}
+            />
           </div>
         ) : (
-          <div className="max-h-[520px] overflow-auto">
-            <table className="min-w-[760px] border-collapse">
-              <thead className="sticky top-0 z-10 bg-slate-50">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600">
-                    Name
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600">
-                    Location
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600">
-                    Slug / TZ
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600">
-                    Status
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-600">
-                    Actions
-                  </th>
+          <div className="max-h-[560px] overflow-auto">
+            <table className="min-w-[760px] border-collapse text-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
+                <tr className="text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3">Name</th>
+                  <th className="px-5 py-3">Location</th>
+                  <th className="px-5 py-3">Slug / Timezone</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {rows.map((m) => (
-                  <tr key={m.id} className="border-t border-slate-100">
-                    <td className="px-3 py-2 align-middle text-slate-900">
-                      <div className="font-semibold">
+                  <tr key={m.id} className="transition hover:bg-slate-50/70">
+                    <td className="px-5 py-3 align-middle">
+                      <div className="font-semibold text-slate-900">
                         {m.official_name}
                       </div>
                       {m.short_name && (
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-xs text-slate-500">
                           {m.short_name}
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2 align-middle text-slate-700">
+                    <td className="px-5 py-3 align-middle text-slate-700">
                       <div>{m.city}</div>
-                      <div className="text-[11px] text-slate-500">
-                        {m.region ?? ""}
-                      </div>
+                      {m.region && (
+                        <div className="text-xs text-slate-500">{m.region}</div>
+                      )}
                       {(m.address_line1 || m.postal_code) && (
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-xs text-slate-400">
                           {m.address_line1}
                           {m.postal_code && ` • ${m.postal_code}`}
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2 align-middle text-slate-700">
-                      <div className="text-[11px] text-slate-500">
-                        slug
-                      </div>
-                      <div className="text-[11px] text-slate-900">
+                    <td className="px-5 py-3 align-middle">
+                      <code className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">
                         {m.slug}
-                      </div>
-                      <div className="mt-1 text-[11px] text-slate-500">
+                      </code>
+                      <div className="mt-1 text-xs text-slate-400">
                         {m.timezone}
                       </div>
                     </td>
-                    <td className="px-3 py-2 align-middle">
+                    <td className="px-5 py-3 align-middle">
                       {m.is_active ? (
-                        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
-                          Active
-                        </span>
+                        <Badge tone="emerald">Active</Badge>
                       ) : (
-                        <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
-                          Hidden
-                        </span>
+                        <Badge tone="slate">Hidden</Badge>
                       )}
                     </td>
-                    <td className="px-3 py-2 align-middle">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
+                    <td className="px-5 py-3 align-middle">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
                           onClick={() => openEditForm(m)}
-                          className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                         >
                           Edit
-                        </button>
-                        <button
-                          type="button"
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={m.is_active ? "danger" : "subtle"}
                           disabled={updatingActiveId === m.id}
                           onClick={() => void handleToggleActive(m)}
-                          className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800 disabled:opacity-60"
                         >
-                          {m.is_active ? "Hide in app" : "Activate"}
-                        </button>
+                          {updatingActiveId === m.id
+                            ? "…"
+                            : m.is_active
+                            ? "Hide in app"
+                            : "Activate"}
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -450,214 +428,162 @@ const MasjidsAdminPage: React.FC = () => {
             </table>
           </div>
         )}
+      </Card>
 
-        {/* Slide-over / panel for form */}
-        {formMode && (
-          <div className="absolute inset-0 flex justify-end bg-slate-950/30 backdrop-blur-sm">
-            <div className="flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-950">
-                    {formMode === "create"
-                      ? "Add masjid"
-                      : "Edit masjid"}
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
-                    Basic profile used in the app and Ramadan tools.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Close
-                </button>
+      {/* Slide-over / panel for form */}
+      {formMode && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            onClick={closeForm}
+            aria-hidden="true"
+          />
+          <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">
+                  {formMode === "create" ? "Add masjid" : "Edit masjid"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Basic profile used in the app and Ramadan tools.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeForm}
+                aria-label="Close"
+                className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
+              >
+                <CloseIcon width={18} height={18} />
+              </button>
+            </div>
+
+            <form
+              id="masjid-form"
+              onSubmit={handleSave}
+              className="flex-1 space-y-4 overflow-y-auto px-5 py-5"
+            >
+              <Field label="Official name *">
+                <input
+                  type="text"
+                  value={form.official_name}
+                  onChange={(e) => handleChange("official_name", e.target.value)}
+                  className={inputCls}
+                  placeholder="Centro Islamico di Bolzano"
+                />
+              </Field>
+
+              <Field label="Short name">
+                <input
+                  type="text"
+                  value={form.short_name}
+                  onChange={(e) => handleChange("short_name", e.target.value)}
+                  className={inputCls}
+                  placeholder="Bolzano mosque"
+                />
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="City *">
+                  <input
+                    type="text"
+                    value={form.city}
+                    onChange={(e) => handleChange("city", e.target.value)}
+                    className={inputCls}
+                    placeholder="Bolzano"
+                  />
+                </Field>
+                <Field label="Region / province">
+                  <input
+                    type="text"
+                    value={form.region}
+                    onChange={(e) => handleChange("region", e.target.value)}
+                    className={inputCls}
+                    placeholder="Alto Adige"
+                  />
+                </Field>
               </div>
 
-              <form
-                onSubmit={handleSave}
-                className="space-y-3 overflow-y-auto pr-1"
+              <Field label="Address line 1">
+                <input
+                  type="text"
+                  value={form.address_line1}
+                  onChange={(e) => handleChange("address_line1", e.target.value)}
+                  className={inputCls}
+                  placeholder="Via Example 12"
+                />
+              </Field>
+
+              <Field label="Address line 2">
+                <input
+                  type="text"
+                  value={form.address_line2}
+                  onChange={(e) => handleChange("address_line2", e.target.value)}
+                  className={inputCls}
+                  placeholder="(optional)"
+                />
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Postal code">
+                  <input
+                    type="text"
+                    value={form.postal_code}
+                    onChange={(e) => handleChange("postal_code", e.target.value)}
+                    className={inputCls}
+                    placeholder="39100"
+                  />
+                </Field>
+                <Field label="Timezone *">
+                  <input
+                    type="text"
+                    value={form.timezone}
+                    onChange={(e) => handleChange("timezone", e.target.value)}
+                    className={inputCls}
+                    placeholder="Europe/Rome"
+                  />
+                </Field>
+              </div>
+
+              <Field
+                label="Slug *"
+                hint="Used in URLs and internal references. No spaces, lowercase."
               >
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                    Official name *
-                  </label>
-                  <input
-                    type="text"
-                    value={form.official_name}
-                    onChange={(e) =>
-                      handleChange("official_name", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                    placeholder="Centro Islamico di Bolzano"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={form.slug}
+                  onChange={(e) => handleChange("slug", e.target.value)}
+                  className={inputCls}
+                  placeholder="bolzano-masjid"
+                />
+              </Field>
 
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                    Short name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.short_name}
-                    onChange={(e) =>
-                      handleChange("short_name", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                    placeholder="Bolzano mosque"
-                  />
-                </div>
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(e) => handleChange("is_active", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="font-medium">Visible in mobile app</span>
+              </label>
+            </form>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      value={form.city}
-                      onChange={(e) =>
-                        handleChange("city", e.target.value)
-                      }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                      placeholder="Bolzano"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                      Region / province
-                    </label>
-                    <input
-                      type="text"
-                      value={form.region}
-                      onChange={(e) =>
-                        handleChange("region", e.target.value)
-                      }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                      placeholder="Alto Adige"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                    Address line 1
-                  </label>
-                  <input
-                    type="text"
-                    value={form.address_line1}
-                    onChange={(e) =>
-                      handleChange("address_line1", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                    placeholder="Via Example 12"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                    Address line 2
-                  </label>
-                  <input
-                    type="text"
-                    value={form.address_line2}
-                    onChange={(e) =>
-                      handleChange("address_line2", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                    placeholder="(optional)"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                      Postal code
-                    </label>
-                    <input
-                      type="text"
-                      value={form.postal_code}
-                      onChange={(e) =>
-                        handleChange("postal_code", e.target.value)
-                      }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                      placeholder="39100"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                      Timezone *
-                    </label>
-                    <input
-                      type="text"
-                      value={form.timezone}
-                      onChange={(e) =>
-                        handleChange("timezone", e.target.value)
-                      }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                      placeholder="Europe/Rome"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-slate-500">
-                    Slug *
-                  </label>
-                  <input
-                    type="text"
-                    value={form.slug}
-                    onChange={(e) =>
-                      handleChange("slug", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-600"
-                    placeholder="bolzano-masjid"
-                  />
-                  <p className="mt-1 text-[10px] text-slate-500">
-                    Used in URLs and internal references. No spaces, lowercase.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <label className="inline-flex items-center gap-2 text-[11px] text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={form.is_active}
-                      onChange={(e) =>
-                        handleChange("is_active", e.target.checked)
-                      }
-                      className="h-3 w-3 rounded border-slate-300 text-emerald-700"
-                    />
-                    Visible in mobile app
-                  </label>
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={closeForm}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-md bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
-                  >
-                    {saving
-                      ? "Saving..."
-                      : formMode === "create"
-                      ? "Create masjid"
-                      : "Save changes"}
-                  </button>
-                </div>
-              </form>
+            <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
+              <Button variant="secondary" onClick={closeForm}>
+                Cancel
+              </Button>
+              <Button type="submit" form="masjid-form" disabled={saving}>
+                {saving
+                  ? "Saving…"
+                  : formMode === "create"
+                  ? "Create masjid"
+                  : "Save changes"}
+              </Button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

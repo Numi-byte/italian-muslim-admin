@@ -1,6 +1,8 @@
 // src/pages/IftarRequestsPage.tsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { Alert, Badge, Button, Card, EmptyState, Spinner } from "../components/ui";
+import { InboxIcon } from "../components/icons";
 
 type IftarRequestRow = {
   id: number;
@@ -102,144 +104,115 @@ const IftarRequestsPage: React.FC = () => {
     setUpdatingId(null);
   };
 
+  const pendingCount = rows.filter((r) => r.status === "requested").length;
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-base font-semibold text-slate-100">
-          Iftar sponsorship requests
-        </h2>
-        <p className="text-xs text-slate-400">
-          One accepted sponsor per day. Approve or reject user requests.
-        </p>
-      </div>
+      {error && <Alert tone="error">{error}</Alert>}
 
-      {error && (
-        <div className="rounded-md border border-red-500/60 bg-red-500/10 text-xs text-red-200 px-3 py-2">
-          {error}
-        </div>
-      )}
-
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden text-xs">
-        <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
-          <span className="text-slate-200 font-medium">Requests</span>
-          {loading ? (
-            <span className="text-slate-400">Loading…</span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void handleRefresh()}
-              className="text-[11px] px-2 py-1 rounded-full border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200"
-            >
-              Refresh
-            </button>
-          )}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-slate-900">Requests</span>
+            {pendingCount > 0 && (
+              <Badge tone="amber">{pendingCount} pending</Badge>
+            )}
+            {loading && <Spinner />}
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => void handleRefresh()}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
         </div>
 
         {rows.length === 0 ? (
-          <div className="p-4 text-slate-400">
-            No iftar requests yet. When users request a sponsorship day, they
-            will appear here.
+          <div className="p-6">
+            <EmptyState
+              icon={<InboxIcon />}
+              title="No iftar requests yet"
+              description="When users request a sponsorship day, they'll appear here for you to approve or reject."
+            />
           </div>
         ) : (
-          <div className="max-h-[480px] overflow-y-auto">
-            <table className="min-w-full border-collapse">
-              <thead className="bg-slate-900/80 sticky top-0">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
-                    Day
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
-                    Masjid
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
-                    Requester
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
-                    Note
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
-                    Status
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-300">
-                    Actions
-                  </th>
+          <div className="max-h-[520px] overflow-auto">
+            <table className="min-w-[760px] border-collapse text-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
+                <tr className="text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <th className="px-5 py-3">Day</th>
+                  <th className="px-5 py-3">Masjid</th>
+                  <th className="px-5 py-3">Requester</th>
+                  <th className="px-5 py-3">Note</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {rows.map((r) => {
                   const dateLabel = new Date(r.date).toLocaleDateString(
                     "it-IT",
                     { weekday: "short", day: "2-digit", month: "2-digit" }
                   );
 
-                  // 👇 Show message, or note, or fallback
+                  // Show message, or note, or fallback
                   const text = r.message ?? r.note ?? "—";
 
                   return (
-                    <tr key={r.id} className="border-t border-slate-800">
-                      <td className="px-3 py-2 align-middle text-slate-100">
-                        <div className="font-semibold">
+                    <tr key={r.id} className="transition hover:bg-slate-50/70">
+                      <td className="px-5 py-3 align-middle">
+                        <div className="font-semibold text-slate-900">
                           Day {r.day_number}
                         </div>
-                        <div className="text-[11px] text-slate-400">
-                          {dateLabel}
-                        </div>
+                        <div className="text-xs text-slate-400">{dateLabel}</div>
                       </td>
-                      <td className="px-3 py-2 align-middle text-slate-200">
+                      <td className="px-5 py-3 align-middle text-slate-700">
                         <div>{r.masjid_name}</div>
-                        <div className="text-[11px] text-slate-400">
-                          {r.city}
-                        </div>
+                        <div className="text-xs text-slate-400">{r.city}</div>
                       </td>
-                      <td className="px-3 py-2 align-middle text-slate-200">
+                      <td className="px-5 py-3 align-middle text-slate-700">
                         <div>{r.requester_name ?? "—"}</div>
-                        <div className="text-[11px] text-slate-400">
-                          {r.phone ?? ""}
-                        </div>
+                        {r.phone && (
+                          <div className="text-xs text-slate-400">{r.phone}</div>
+                        )}
                       </td>
-                      <td className="px-3 py-2 align-middle text-slate-300">
+                      <td className="max-w-[220px] px-5 py-3 align-middle text-slate-600">
                         {text}
                       </td>
-                      <td className="px-3 py-2 align-middle">
+                      <td className="px-5 py-3 align-middle">
                         {r.status === "requested" && (
-                          <span className="inline-flex px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-medium">
-                            Pending
-                          </span>
+                          <Badge tone="amber">Pending</Badge>
                         )}
                         {r.status === "approved" && (
-                          <span className="inline-flex px-2 py-0.5 rounded-full bg-emerald-500 text-emerald-950 font-medium">
-                            Approved
-                          </span>
+                          <Badge tone="emerald">Approved</Badge>
                         )}
                         {r.status === "rejected" && (
-                          <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-700 text-slate-50 font-medium">
-                            Rejected
-                          </span>
+                          <Badge tone="rose">Rejected</Badge>
                         )}
                         {r.status === "cancelled_by_user" && (
-                          <span className="inline-flex px-2 py-0.5 rounded-full bg-slate-600 text-slate-50 font-medium">
-                            Cancelled
-                          </span>
+                          <Badge tone="slate">Cancelled</Badge>
                         )}
                       </td>
-                      <td className="px-3 py-2 align-middle">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
+                      <td className="px-5 py-3 align-middle">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="subtle"
                             disabled={updatingId === r.id}
                             onClick={() => void updateStatus(r.id, "approved")}
-                            className="px-2 py-1 rounded-full text-[11px] border border-emerald-500/60 bg-emerald-500/10 text-emerald-200 disabled:opacity-60"
                           >
                             Approve
-                          </button>
-                          <button
-                            type="button"
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
                             disabled={updatingId === r.id}
                             onClick={() => void updateStatus(r.id, "rejected")}
-                            className="px-2 py-1 rounded-full text-[11px] border border-red-500/60 bg-red-500/10 text-red-200 disabled:opacity-60"
                           >
                             Reject
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -249,7 +222,7 @@ const IftarRequestsPage: React.FC = () => {
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

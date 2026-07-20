@@ -38,14 +38,18 @@ const emptyForm = (topic: ContactTopic): FormState => ({
   website: "",
 });
 
-const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400";
-const labelClass = "mb-1 block text-[11px] font-semibold text-slate-300";
-
 export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
   embedded = false,
   defaultTopic = "purchase",
 }) => {
+  // The panel is reused on the dark public /contact page and inside the
+  // light admin console (embedded). Style it to match its surroundings.
+  const inputClass = embedded
+    ? "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
+    : "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400";
+  const labelClass = embedded
+    ? "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+    : "mb-1 block text-[11px] font-semibold text-slate-300";
   const { session, user } = useAuth();
   const location = useLocation();
   const queryTopic = useMemo(() => {
@@ -147,28 +151,46 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
 
   return (
     <section
-      className={`rounded-lg border border-slate-800 bg-slate-950 p-5 text-slate-100 ${
-        embedded ? "" : "shadow-2xl shadow-black/20"
-      }`}
+      className={
+        embedded
+          ? "rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm shadow-slate-900/[0.03] sm:p-6"
+          : "rounded-lg border border-slate-800 bg-slate-950 p-5 text-slate-100 shadow-2xl shadow-black/20"
+      }
     >
       <div className="mb-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">
+        <p
+          className={`text-[11px] font-bold uppercase tracking-[0.2em] ${
+            embedded ? "text-emerald-700" : "text-emerald-300"
+          }`}
+        >
           Support
         </p>
-        <h1 className="mt-2 text-2xl font-semibold text-white">
+        <h1
+          className={`mt-2 text-2xl font-semibold ${
+            embedded ? "text-slate-900" : "text-white"
+          }`}
+        >
           Contact UmmahWay
         </h1>
-        <p className="mt-2 text-sm leading-6 text-slate-400">
+        <p
+          className={`mt-2 text-sm leading-6 ${
+            embedded ? "text-slate-500" : "text-slate-400"
+          }`}
+        >
           Messages are received for {SUPPORT_EMAIL}.
         </p>
       </div>
 
       {notice && (
         <div
-          className={`mb-4 rounded-md border px-3 py-2 text-xs ${
+          className={`mb-4 rounded-xl border px-3 py-2 text-xs ${
             noticeType === "success"
-              ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
-              : "border-red-500/60 bg-red-500/10 text-red-200"
+              ? embedded
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
+              : embedded
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-red-500/60 bg-red-500/10 text-red-200"
           }`}
         >
           {notice}

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../auth/authContext";
+import { Alert, Badge, Button, Card, Select, Spinner } from "../components/ui";
 
 type Masjid = {
   id: string;
@@ -954,102 +955,91 @@ const PrayerTimesPage: React.FC = () => {
   // UI
   // ---------------------------------------------------------------------------
 
+  const timeInput =
+    "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
+  const fieldLabel = "block text-xs font-semibold uppercase tracking-wide text-slate-500";
+
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">
-            Daily prayer times (adhan & jamā‘ah)
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">
+      <Card className="p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <p className="max-w-2xl text-sm leading-6 text-slate-500">
             Set official masjid times for Fajr, Dhuhr, Asr, Maghrib and Isha.
-            The mobile app will read these as the source of truth.
+            The mobile app reads these as the source of truth.
           </p>
-        </div>
 
-        <div className="grid gap-3 text-xs sm:grid-cols-2 lg:w-[560px]">
-          <div className="space-y-1.5">
-            <span className="font-medium text-slate-600">Masjid</span>
-            <select
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm"
-              value={selectedMasjidId ?? ""}
-              onChange={(e) => {
-                setSelectedMasjidId(e.target.value || null);
-                setMessage(null);
-                setMessageType(null);
-                setDirty(false);
-              }}
-              disabled={loadingMasjids}
-            >
-              {masjids.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.official_name} ({m.city})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="font-medium text-slate-600">Date</span>
-            <div className="grid grid-cols-[48px_minmax(0,1fr)_48px] gap-1">
-              <button
-                type="button"
-                onClick={() => handleChangeDateBy(-1)}
-                className="rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                ◀
-              </button>
-              <input
-                type="date"
-                value={selectedDate}
+          <div className="grid gap-3 sm:grid-cols-2 lg:w-[560px]">
+            <div className="space-y-1.5">
+              <label className={fieldLabel}>Masjid</label>
+              <Select
+                value={selectedMasjidId ?? ""}
                 onChange={(e) => {
-                  setSelectedDate(e.target.value);
+                  setSelectedMasjidId(e.target.value || null);
                   setMessage(null);
                   setMessageType(null);
                   setDirty(false);
                 }}
-                className="min-w-0 rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-950 shadow-sm"
-              />
-              <button
-                type="button"
-                onClick={() => handleChangeDateBy(1)}
-                className="rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                disabled={loadingMasjids}
               >
-                ▶
-              </button>
-              <button
-                type="button"
-                onClick={handleGoToday}
-                className="hidden"
-              >
-                Today
-              </button>
+                {masjids.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.official_name} ({m.city})
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className={fieldLabel}>Date</label>
+              <div className="grid grid-cols-[44px_minmax(0,1fr)_44px] gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleChangeDateBy(-1)}
+                  aria-label="Previous day"
+                  className="rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  ◀
+                </button>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setMessage(null);
+                    setMessageType(null);
+                    setDirty(false);
+                  }}
+                  className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleChangeDateBy(1)}
+                  aria-label="Next day"
+                  className="rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  ▶
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      </div>
+      </Card>
 
       {isLimitedPrayerEditor && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+        <Card className="border-emerald-200 bg-emerald-50/60 p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                 Jamaah editor
               </div>
-              <div className="mt-1 text-base font-semibold text-slate-950">
+              <div className="mt-1 text-base font-semibold text-slate-900">
                 {formatFullDate(selectedDate)}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleGoToday}
-              className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
-            >
+            <Button size="sm" onClick={handleGoToday}>
               Today
-            </button>
+            </Button>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -1060,73 +1050,66 @@ const PrayerTimesPage: React.FC = () => {
                   key={day.date}
                   type="button"
                   onClick={() => handleSelectDate(day.date)}
-                  className={`rounded-md border px-3 py-2 text-left ${
+                  className={`rounded-xl border px-3 py-2 text-left transition ${
                     selected
-                      ? "border-emerald-500 bg-white text-emerald-900 shadow-sm"
-                      : "border-emerald-200 bg-emerald-100/60 text-slate-700 hover:bg-white"
+                      ? "border-emerald-400 bg-white text-emerald-900 shadow-sm ring-1 ring-emerald-200"
+                      : "border-emerald-100 bg-white/70 text-slate-700 hover:bg-white"
                   }`}
                 >
                   <span className="block text-xs font-semibold">
                     {day.compactLabel}
                   </span>
-                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                  <span className="mt-0.5 block text-[11px] text-slate-400">
                     {day.date}
                   </span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Message + status line */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        {message && (
-          <div
-            className={`rounded-lg border px-3 py-2 text-xs max-w-xl ${
-              messageType === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-red-200 bg-red-50 text-red-800"
-            }`}
+        {message ? (
+          <Alert
+            tone={messageType === "success" ? "success" : "error"}
+            className="max-w-xl"
           >
             {message}
-          </div>
+          </Alert>
+        ) : (
+          <span />
         )}
 
         <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
-          {dirty && (
-            <span className="inline-flex items-center px-2 py-1 rounded-full border border-amber-400/60 bg-amber-500/10 text-amber-200">
-              ● Unsaved changes
-            </span>
-          )}
+          {dirty && <Badge tone="amber">● Unsaved changes</Badge>}
           {lastSavedAt && !dirty && (
-            <span className="text-slate-500">
+            <span>
               Last saved at{" "}
-              <span className="font-medium text-slate-700">
-                {lastSavedAt}
-              </span>
+              <span className="font-medium text-slate-700">{lastSavedAt}</span>
             </span>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <Card className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-3 text-xs lg:flex-row lg:items-center lg:justify-between">
           <div className="text-slate-500">
             {selectedMasjid ? (
               <>
                 Editing{" "}
-                <span className="font-medium text-slate-950">
+                <span className="font-semibold text-slate-900">
                   {selectedMasjid.official_name}
                 </span>{" "}
-                on <span className="text-slate-950">{selectedDate}</span>
+                on <span className="font-medium text-slate-900">{selectedDate}</span>
               </>
             ) : (
               "Select a masjid to start."
             )}
           </div>
-          <div className="grid gap-2 sm:flex sm:items-center">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void handleImportMasjidMwlWeek()}
@@ -1144,12 +1127,13 @@ const PrayerTimesPage: React.FC = () => {
                   ? `Imports ${selectedDate} to ${weeklyImportEndDate} using ${selectedMasjidImportLocation.label}.`
                   : "Select a masjid before importing."
               }
-              className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-2 text-[11px] font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+              className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:opacity-50"
             >
-              {importingMasjidAdhan ? "Importing..." : "Import MWL week"}
+              {importingMasjidAdhan ? "Importing…" : "Import MWL week"}
             </button>
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={() => void handleCopyFromPreviousDay("both")}
               disabled={
                 isLimitedPrayerEditor ||
@@ -1157,39 +1141,39 @@ const PrayerTimesPage: React.FC = () => {
                 !selectedDate ||
                 loadingPrayers
               }
-              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Copy from previous day
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              size="sm"
+              variant="subtle"
               onClick={() => void handleCopyFromPreviousDay("jamaat")}
               disabled={!selectedMasjidId || !selectedDate || loadingPrayers}
-              className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
             >
               Copy jamā‘ah only
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
               onClick={handleClearAllLocal}
               disabled={
                 isLimitedPrayerEditor || !selectedMasjidId || rows.length === 0
               }
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-40"
             >
               Clear all (this day)
-            </button>
+            </Button>
           </div>
         </div>
 
         {!isLimitedPrayerEditor && selectedMasjid && sameCityMasjids.length > 0 && (
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-col gap-1">
-              <p className="text-xs font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-slate-900">
                 Apply adhan times to other masjids in {selectedMasjid.city}
               </p>
               <p className="text-[11px] text-slate-500">
-                This copies only <span className="text-slate-900">Start (adhan)</span>{" "}
+                This copies only{" "}
+                <span className="font-medium text-slate-700">Start (adhan)</span>{" "}
                 times for this date. Jamā‘ah times are not changed.
               </p>
             </div>
@@ -1200,17 +1184,17 @@ const PrayerTimesPage: React.FC = () => {
                 return (
                   <label
                     key={masjid.id}
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] cursor-pointer ${
+                    className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${
                       checked
-                        ? "border-sky-400/70 bg-sky-500/15 text-sky-100"
-                        : "border-slate-200 bg-white text-slate-600"
+                        ? "border-sky-300 bg-sky-50 text-sky-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => handleToggleCityMasjid(masjid.id)}
-                      className="accent-sky-500"
+                      className="accent-sky-600"
                     />
                     {masjid.official_name}
                   </label>
@@ -1219,8 +1203,9 @@ const PrayerTimesPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <button
-                type="button"
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={() =>
                   setSelectedCityMasjidIds((prev) =>
                     prev.length === sameCityMasjids.length
@@ -1228,12 +1213,11 @@ const PrayerTimesPage: React.FC = () => {
                       : sameCityMasjids.map((m) => m.id)
                   )
                 }
-                className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
               >
                 {selectedCityMasjidIds.length === sameCityMasjids.length
                   ? "Unselect all"
                   : "Select all"}
-              </button>
+              </Button>
 
               <button
                 type="button"
@@ -1243,7 +1227,7 @@ const PrayerTimesPage: React.FC = () => {
                   selectedCityMasjidIds.length === 0 ||
                   !selectedDate
                 }
-                className="rounded-md border border-sky-300 bg-sky-50 px-3 py-1.5 text-[11px] font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50"
+                className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-100 disabled:opacity-50"
               >
                 {applyingCityAdhan
                   ? "Applying adhan…"
@@ -1254,31 +1238,33 @@ const PrayerTimesPage: React.FC = () => {
         )}
 
         {isLimitedPrayerEditor && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+          <Alert tone="success">
             This account can edit only jamā‘ah times for this masjid.
-          </div>
+          </Alert>
         )}
 
         {loadingPrayers ? (
-          <div className="text-xs text-slate-400">Loading prayer times…</div>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Spinner /> Loading prayer times…
+          </div>
         ) : rows.length === 0 ? (
-          <div className="text-xs text-slate-400">
+          <div className="text-sm text-slate-500">
             No prayers to show. Select a masjid and date.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {rows.map((row) => {
               const label = PRAYERS.find((p) => p.key === row.prayer)?.label;
               return (
                 <div
                   key={row.prayer}
-                  className="flex min-h-40 flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
+                  className="flex min-h-40 flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-950">
+                    <span className="text-sm font-semibold text-slate-900">
                       {label}
                     </span>
-                    <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                       {row.prayer.toUpperCase()}
                     </span>
                   </div>
@@ -1298,7 +1284,7 @@ const PrayerTimesPage: React.FC = () => {
                             })
                           }
                           disabled={isLimitedPrayerEditor}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
+                          className={timeInput}
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1314,7 +1300,7 @@ const PrayerTimesPage: React.FC = () => {
                             })
                           }
                           disabled={isLimitedPrayerEditor}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
+                          className={timeInput}
                         />
                       </div>
                     </div>
@@ -1330,7 +1316,7 @@ const PrayerTimesPage: React.FC = () => {
                           updateRow(row.prayer, { start_time: e.target.value })
                         }
                         disabled={isLimitedPrayerEditor}
-                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 disabled:bg-slate-100 disabled:text-slate-400"
+                        className={timeInput}
                       />
                     </div>
                   )}
@@ -1347,7 +1333,7 @@ const PrayerTimesPage: React.FC = () => {
                           jamaat_time: e.target.value,
                         })
                       }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950"
+                      className={timeInput}
                     />
                   </div>
                 </div>
@@ -1356,7 +1342,7 @@ const PrayerTimesPage: React.FC = () => {
           </div>
         )}
 
-        <div className="grid gap-2 pt-2 sm:flex sm:justify-end">
+        <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() =>
@@ -1368,22 +1354,20 @@ const PrayerTimesPage: React.FC = () => {
               savingJamaat ||
               !selectedMasjidId
             }
-            className="rounded-md bg-sky-600 px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-60"
+            className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-sky-600/20 transition hover:bg-sky-500 disabled:opacity-60"
           >
             {savingAdhan ? "Saving…" : "Save adhan times"}
           </button>
-          <button
-            type="button"
+          <Button
             onClick={() =>
               void handleSave("jamaat_time", setSavingJamaat, "Jamā‘ah times")
             }
             disabled={savingAdhan || savingJamaat || !selectedMasjidId}
-            className="rounded-md bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-60"
           >
             {savingJamaat ? "Saving…" : "Save jamā‘ah times"}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

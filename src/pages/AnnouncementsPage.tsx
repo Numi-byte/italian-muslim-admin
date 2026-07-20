@@ -1,6 +1,27 @@
 // src/pages/AnnouncementsPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Select,
+  Spinner,
+} from "../components/ui";
+import { MegaphoneIcon } from "../components/icons";
+
+const CATEGORY_TONE: Record<
+  AnnouncementCategory,
+  "slate" | "sky" | "violet" | "amber" | "rose"
+> = {
+  general: "slate",
+  jumuah: "sky",
+  event: "violet",
+  ramadan: "amber",
+  urgent: "rose",
+};
 
 type Masjid = {
   id: string;
@@ -365,26 +386,24 @@ const AnnouncementsPage: React.FC = () => {
   // UI
   // ------------------------------------------------------------
 
+  const inputCls =
+    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15";
+  const fieldLabel = "block text-xs font-semibold uppercase tracking-wide text-slate-500";
+
   return (
     <div className="space-y-5">
       {/* Top header row */}
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">
-            Masjid announcements
-          </h2>
-          <p className="text-sm text-slate-500">
-            Publish official updates for each masjid: Jumu‘ah notes, events,
-            Ramadan information and urgent alerts. The mobile app reads this as
-            the single source of truth.
-          </p>
-        </div>
+      <Card className="flex flex-col gap-4 p-5 lg:flex-row lg:items-end lg:justify-between">
+        <p className="max-w-3xl text-sm leading-6 text-slate-500">
+          Publish official updates for each masjid: Jumu‘ah notes, events,
+          Ramadan information and urgent alerts. The mobile app reads this as
+          the single source of truth.
+        </p>
 
-        <div className="grid gap-3 text-xs sm:grid-cols-[minmax(0,1fr)_auto] lg:w-[520px]">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:w-[520px]">
           <div className="space-y-1.5">
-            <span className="font-medium text-slate-600">Masjid</span>
-            <select
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm"
+            <label className={fieldLabel}>Masjid</label>
+            <Select
               value={selectedMasjidId ?? ""}
               onChange={(e) => setSelectedMasjidId(e.target.value || null)}
               disabled={loadingMasjids}
@@ -394,68 +413,58 @@ const AnnouncementsPage: React.FC = () => {
                   {m.official_name} ({m.city})
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
-          <button
-            type="button"
+          <Button
+            className="self-end"
             onClick={resetFormForCreate}
-            className="self-end rounded-md bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
             disabled={!selectedMasjidId}
           >
-            + New announcement
-          </button>
+            + New
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Message banner */}
       {message && (
-        <div
-          className={`rounded-lg border px-3 py-2 text-xs ${
-            messageType === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
+        <Alert tone={messageType === "success" ? "success" : "error"}>
           {message}
-        </div>
+        </Alert>
       )}
 
       {/* Main content layout */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Left: list / filters */}
-        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between text-xs">
+        <Card className="space-y-4 p-5 lg:col-span-2">
+          <div className="flex flex-col gap-3 text-xs md:flex-row md:items-end md:justify-between">
             <div className="text-slate-500">
               {selectedMasjid ? (
                 <>
                   Managing announcements for{" "}
-                  <span className="font-medium text-slate-950">
+                  <span className="font-medium text-slate-900">
                     {selectedMasjid.official_name}
                   </span>{" "}
-                  ({selectedMasjid.city}).{" "}
-                  <span className="text-slate-500">
-                    {activeCount} active.
-                  </span>
+                  ({selectedMasjid.city}). {activeCount} active.
                 </>
               ) : (
                 "Select a masjid to see announcements."
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-end gap-3">
               {/* Status filter */}
               <div className="space-y-1.5">
-                <span className="text-slate-500">Status</span>
-                <div className="inline-flex overflow-hidden rounded-md border border-slate-300 bg-white">
+                <span className={fieldLabel}>Status</span>
+                <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-white">
                   {(["active", "upcoming", "past", "all"] as StatusFilter[]).map(
                     (key) => (
                       <button
                         key={key}
                         type="button"
                         onClick={() => setStatusFilter(key)}
-                        className={`px-3 py-1.5 text-[11px] ${
+                        className={`px-3 py-1.5 text-[11px] font-medium transition ${
                           statusFilter === key
-                            ? "bg-emerald-700 text-white font-semibold"
+                            ? "bg-emerald-600 text-white"
                             : "text-slate-600 hover:bg-slate-50"
                         }`}
                       >
@@ -474,9 +483,9 @@ const AnnouncementsPage: React.FC = () => {
 
               {/* Category filter */}
               <div className="space-y-1.5">
-                <span className="text-slate-500">Category</span>
-                <select
-                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-[11px] text-slate-900"
+                <span className={fieldLabel}>Category</span>
+                <Select
+                  className="py-1.5 text-xs"
                   value={categoryFilter}
                   onChange={(e) =>
                     setCategoryFilter(e.target.value as CategoryFilter)
@@ -488,72 +497,65 @@ const AnnouncementsPage: React.FC = () => {
                       {c.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
           </div>
 
           {/* List */}
           {loadingRows ? (
-            <div className="text-sm text-slate-500">Loading announcements…</div>
-          ) : filteredRows.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm text-slate-500">
-              No announcements match the current filters. Create one on the
-              right or change filters.
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Spinner /> Loading announcements…
             </div>
+          ) : filteredRows.length === 0 ? (
+            <EmptyState
+              icon={<MegaphoneIcon />}
+              title="No announcements match"
+              description="Create one on the right, or change the filters above."
+            />
           ) : (
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2">
               {filteredRows.map((r) => {
                 const status = r.status;
                 const isUpcoming = status === "upcoming";
                 const isActive = status === "active";
+                const selected = form?.id === r.id;
 
                 return (
                   <button
                     key={r.id}
                     type="button"
                     onClick={() => startEdit(r)}
-                    className="flex w-full flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-left hover:bg-white hover:shadow-sm"
+                    className={`flex w-full flex-col gap-2 rounded-xl border px-4 py-3 text-left transition ${
+                      selected
+                        ? "border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-200"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-1.5">
-                        {r.is_pinned && (
-                          <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                            PINNED
-                          </span>
-                        )}
-
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {r.is_pinned && <Badge tone="amber">📌 Pinned</Badge>}
+                        <Badge tone={CATEGORY_TONE[r.category]}>
                           {r.category.toUpperCase()}
-                        </span>
+                        </Badge>
                       </div>
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] ${
-                          isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                            : isUpcoming
-                            ? "border-sky-200 bg-sky-50 text-sky-800"
-                            : "border-slate-200 bg-white text-slate-600"
-                        }`}
+                      <Badge
+                        tone={isActive ? "emerald" : isUpcoming ? "sky" : "slate"}
                       >
-                        {isActive
-                          ? "Active"
-                          : isUpcoming
-                          ? "Upcoming"
-                          : "Past"}
-                      </span>
+                        {isActive ? "Active" : isUpcoming ? "Upcoming" : "Past"}
+                      </Badge>
                     </div>
 
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-950 truncate">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold text-slate-900">
                           {r.title}
                         </div>
-                        <div className="line-clamp-1 text-slate-500">
+                        <div className="line-clamp-1 text-xs text-slate-500">
                           {r.body}
                         </div>
                       </div>
-                      <div className="text-[10px] text-slate-500 shrink-0">
+                      <div className="shrink-0 text-[11px] text-slate-400">
                         {(r.starts_at ?? r.created_at).slice(0, 10)}
                       </div>
                     </div>
@@ -562,70 +564,62 @@ const AnnouncementsPage: React.FC = () => {
               })}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Right: editor panel */}
-        <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-900">
-                {form
-                  ? isEditing
-                    ? "Edit announcement"
-                    : "New announcement"
-                  : "Announcement editor"}
-              </div>
-              <div className="text-[11px] text-slate-500">
-                {form
-                  ? "Adjust fields and save. Changes are live for the mobile app."
-                  : "Select an announcement from the list or create a new one."}
-              </div>
+        <Card className="flex flex-col gap-3 p-5">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              {form
+                ? isEditing
+                  ? "Edit announcement"
+                  : "New announcement"
+                : "Announcement editor"}
+            </div>
+            <div className="text-xs text-slate-500">
+              {form
+                ? "Adjust fields and save. Changes are live for the mobile app."
+                : "Select an announcement from the list or create a new one."}
             </div>
           </div>
 
           {!form ? (
-            <div className="mt-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-[11px] text-slate-500">
+            <div className="mt-1 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-4 text-xs text-slate-500">
               No announcement selected. Click{" "}
-              <span className="font-medium text-emerald-700">
-                “New announcement”
-              </span>{" "}
-              above or pick one from the list to edit.
+              <span className="font-medium text-emerald-700">“New”</span> above or
+              pick one from the list to edit.
             </div>
           ) : (
             <form
-              className="mt-1 space-y-3 text-xs"
+              className="mt-1 space-y-4"
               onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 void handleSave();
               }}
             >
               {/* Title */}
-              <div className="space-y-1">
-                <label className="block text-[11px] font-medium text-slate-500">
-                  Title
-                </label>
+              <div className="space-y-1.5">
+                <label className={fieldLabel}>Title</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => handleChange("title", e.target.value)}
-                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                  className={inputCls}
                   placeholder="Short headline (e.g. Jumu‘ah reminder)"
                 />
               </div>
 
               {/* Body */}
-              <div className="space-y-1">
-                <label className="block text-[11px] font-medium text-slate-500">
-                  Body text
-                </label>
+              <div className="space-y-1.5">
+                <label className={fieldLabel}>Body text</label>
                 <textarea
                   value={form.body}
                   onChange={(e) => handleChange("body", e.target.value)}
                   rows={6}
-                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm resize-none"
+                  className={`${inputCls} resize-y`}
                   placeholder="Full announcement text as it should appear in the app…"
                 />
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[11px] text-slate-400">
                   Paste links with https:// or www. and they will be clickable on
                   the public masjid page.
                 </p>
@@ -633,11 +627,9 @@ const AnnouncementsPage: React.FC = () => {
 
               {/* Category + pinned */}
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                <div className="flex-1 space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Category
-                  </label>
-                  <select
+                <div className="flex-1 space-y-1.5">
+                  <label className={fieldLabel}>Category</label>
+                  <Select
                     value={form.category}
                     onChange={(e) =>
                       handleChange(
@@ -645,124 +637,103 @@ const AnnouncementsPage: React.FC = () => {
                         e.target.value as AnnouncementCategory
                       )
                     }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
                   >
                     {CATEGORY_OPTIONS.map((c) => (
                       <option key={c.value} value={c.value}>
                         {c.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Pin to top
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Pin to top</label>
                   <button
                     type="button"
-                    onClick={() =>
-                      handleChange("is_pinned", !form.is_pinned)
-                    }
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] ${
+                    onClick={() => handleChange("is_pinned", !form.is_pinned)}
+                    className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium transition ${
                       form.is_pinned
                         ? "border-amber-200 bg-amber-50 text-amber-800"
-                        : "border-slate-300 bg-white text-slate-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     <span
                       className={`h-2 w-2 rounded-full ${
-                        form.is_pinned ? "bg-amber-400" : "bg-slate-500"
+                        form.is_pinned ? "bg-amber-400" : "bg-slate-400"
                       }`}
                     />
-                    {form.is_pinned ? "Pinned for this masjid" : "Not pinned"}
+                    {form.is_pinned ? "Pinned" : "Not pinned"}
                   </button>
                 </div>
               </div>
 
               {/* Scheduling */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Visible from (optional)
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Visible from (optional)</label>
                   <input
                     type="datetime-local"
                     value={form.starts_at}
-                    onChange={(e) =>
-                      handleChange("starts_at", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    onChange={(e) => handleChange("starts_at", e.target.value)}
+                    className={inputCls}
                   />
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[11px] text-slate-400">
                     Leave empty to publish immediately.
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Visible until (optional)
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Visible until (optional)</label>
                   <input
                     type="datetime-local"
                     value={form.ends_at}
-                    onChange={(e) =>
-                      handleChange("ends_at", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    onChange={(e) => handleChange("ends_at", e.target.value)}
+                    className={inputCls}
                   />
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[11px] text-slate-400">
                     Leave empty to keep it visible until manually edited.
                   </p>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="pt-2 flex flex-wrap gap-2 justify-between items-center">
-                <div className="text-[11px] text-slate-500">
-                  {form.id ? (
-                    <>Editing existing announcement (ID {form.id}).</>
-                  ) : (
-                    <>Creating a new announcement for this masjid.</>
-                  )}
+              <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
+                <div className="text-[11px] text-slate-400">
+                  {form.id
+                    ? `Editing existing announcement (ID ${form.id}).`
+                    : "Creating a new announcement for this masjid."}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   {form.id && (
-                    <button
-                      type="button"
+                    <Button
+                      variant="danger"
                       onClick={() => void handleDelete()}
                       disabled={deleting || saving}
-                      className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
                     >
                       {deleting ? "Deleting…" : "Delete"}
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={() => {
                       setForm(null);
                       setIsEditing(false);
                     }}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-md bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
-                  >
+                  </Button>
+                  <Button type="submit" disabled={saving}>
                     {saving
                       ? "Saving…"
                       : form.id
                       ? "Save changes"
                       : "Create announcement"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </form>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

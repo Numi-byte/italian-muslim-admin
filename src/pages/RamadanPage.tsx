@@ -1,6 +1,13 @@
 // src/pages/RamadanPage.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient"; // ✅ match PrayerTimesPage
+import {
+  Badge,
+  Button,
+  Card,
+  LoadingBlock,
+  Select,
+} from "../components/ui";
 
 // ✅ Same as PrayerTimesPage dropdown source
 type Masjid = {
@@ -359,98 +366,84 @@ export default function RamadanPage() {
     }
   }
 
+  const inputCls =
+    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15";
+  const fieldLabel = "block text-xs font-semibold uppercase tracking-wide text-slate-500";
+
   if (loading) {
-    return (
-      <div className="min-h-[50vh] flex items-center justify-center text-xs text-slate-300">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-6 w-6 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-          <span>Loading Ramadhan setup…</span>
-        </div>
-      </div>
-    );
+    return <LoadingBlock label="Loading Ramadhan setup…" />;
   }
 
   if (!masjids.length) {
     return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-xs text-slate-300">
-        No masjids found in <span className="font-mono">public_masjids</span>.
-      </div>
+      <Card className="p-6 text-sm text-slate-500">
+        No masjids found in{" "}
+        <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
+          public_masjids
+        </code>
+        .
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top bar */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-1">
-          <div className="text-xs text-slate-400">
-            Today (Europe/Rome): <span className="text-slate-200 font-mono">{todayIso}</span>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1 text-xs text-slate-500">
+          <div>
+            Today (Europe/Rome):{" "}
+            <span className="font-mono text-slate-700">{todayIso}</span>
           </div>
-          <div className="text-xs text-slate-400">
+          <div>
             Selected masjid:{" "}
-            <span className="text-slate-200 font-medium">
+            <span className="font-medium text-slate-700">
               {selectedMasjid?.official_name ?? "—"}
             </span>
-            {selectedMasjid?.city ? <span className="text-slate-500"> · {selectedMasjid.city}</span> : null}
+            {selectedMasjid?.city ? (
+              <span className="text-slate-400"> · {selectedMasjid.city}</span>
+            ) : null}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {dirty && (
-            <span className="text-[11px] px-2 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-200">
-              Unsaved changes
-            </span>
-          )}
-          {status && (
-            <span className="text-[11px] px-2 py-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200">
-              {status}
-            </span>
-          )}
-          {error && (
-            <span className="text-[11px] px-2 py-1 rounded-full border border-rose-500/40 bg-rose-500/10 text-rose-200">
-              {error}
-            </span>
-          )}
-
-          <button
-            type="button"
+        <div className="flex flex-wrap items-center gap-2">
+          {dirty && <Badge tone="amber">Unsaved changes</Badge>}
+          {status && <Badge tone="emerald">{status}</Badge>}
+          {error && <Badge tone="rose">{error}</Badge>}
+          <Button
+            size="sm"
             onClick={handleSave}
             disabled={saving || !dirty}
-            className={`rounded-lg px-3 py-2 text-[11px] font-semibold border ${
-              saving || !dirty
-                ? "border-slate-800 bg-slate-900 text-slate-500 cursor-not-allowed"
-                : "border-emerald-500/40 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/20"
-            }`}
           >
             {saving ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Masjid selector + settings */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-          <div className="text-sm font-semibold">Masjid</div>
-          <p className="mt-1 text-xs text-slate-400">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="p-5 lg:col-span-1">
+          <div className="text-sm font-semibold text-slate-900">Masjid</div>
+          <p className="mt-1 text-xs text-slate-500">
             Choose the masjid you want to configure for Ramadhan.
           </p>
 
-          <label className="mt-3 block text-[11px] text-slate-400">Masjid</label>
-          <select
-            value={masjidId}
-            onChange={(e) => setMasjidId(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
+          <label className="mt-4 mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Masjid
+          </label>
+          <Select value={masjidId} onChange={(e) => setMasjidId(e.target.value)}>
             {masjids.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.official_name} ({m.city})
               </option>
             ))}
-          </select>
+          </Select>
 
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 px-3 py-2">
-            <div>
-              <div className="text-[12px] font-medium text-slate-100">Enable Ramadhan tab</div>
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="pr-3">
+              <div className="text-sm font-medium text-slate-900">
+                Enable Ramadhan tab
+              </div>
               <div className="text-[11px] text-slate-500">
                 Mobile shows the Ramadhan tab only inside the date window.
               </div>
@@ -458,76 +451,79 @@ export default function RamadanPage() {
             <button
               type="button"
               onClick={() => setEnabled((v) => !v)}
-              className={`h-8 w-14 rounded-full border transition ${
-                enabled
-                  ? "border-emerald-500/50 bg-emerald-500/30"
-                  : "border-slate-700 bg-slate-900"
+              className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+                enabled ? "bg-emerald-600" : "bg-slate-300"
               }`}
               aria-label="Toggle Ramadhan"
+              aria-pressed={enabled}
             >
-              <div
-                className={`h-6 w-6 rounded-full bg-slate-50 transition-transform ${
-                  enabled ? "translate-x-7" : "translate-x-1"
+              <span
+                className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  enabled ? "translate-x-6" : "translate-x-1"
                 }`}
               />
             </button>
           </div>
-        </div>
+        </Card>
 
-        <div className="lg:col-span-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <Card className="p-5 lg:col-span-2">
           <div>
-            <div className="text-sm font-semibold">Season settings</div>
-            <p className="mt-1 text-xs text-slate-400">
+            <div className="text-sm font-semibold text-slate-900">
+              Season settings
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
               Set the date window (Europe/Rome) and optional Taraweeh defaults.
             </p>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] text-slate-400">Start date</label>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="space-y-1.5">
+              <label className={fieldLabel}>Start date</label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                className={inputCls}
               />
             </div>
 
-            <div>
-              <label className="block text-[11px] text-slate-400">End date</label>
+            <div className="space-y-1.5">
+              <label className={fieldLabel}>End date</label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                className={inputCls}
               />
               {startDate && endDate && endDate < startDate && (
-                <div className="mt-1 text-[11px] text-rose-300">
+                <div className="text-[11px] text-rose-600">
                   End date must be after start date.
                 </div>
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
-              <div className="text-[11px] text-slate-400">Days in range</div>
-              <div className="mt-1 text-xl font-black text-slate-100">
+            <div className="rounded-xl border border-slate-200 bg-emerald-50/50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                Days in range
+              </div>
+              <div className="mt-1 text-2xl font-bold text-emerald-700">
                 {daysInRange.length || "—"}
               </div>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] text-slate-400">Taraweeh start (optional)</label>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className={fieldLabel}>Taraweeh start (optional)</label>
               <input
                 type="time"
                 value={taraweehTime}
                 onChange={(e) => setTaraweehTime(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                className={inputCls}
               />
             </div>
-            <div>
-              <label className="block text-[11px] text-slate-400">Taraweeh rakaʿah (optional)</label>
+            <div className="space-y-1.5">
+              <label className={fieldLabel}>Taraweeh rakaʿah (optional)</label>
               <input
                 type="number"
                 min={2}
@@ -535,88 +531,90 @@ export default function RamadanPage() {
                 value={taraweehRakaah}
                 onChange={(e) => setTaraweehRakaah(e.target.value)}
                 placeholder="8 or 20"
-                className="mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                className={inputCls}
               />
             </div>
           </div>
 
-          <div className="mt-4 text-[11px] text-slate-500">
+          <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-[11px] text-slate-500">
             Mobile rule: tab shows only if{" "}
-            <span className="font-mono text-slate-200">enabled</span> and{" "}
-            <span className="font-mono text-slate-200">today ∈ [start_date, end_date]</span>.
+            <span className="font-mono text-slate-700">enabled</span> and{" "}
+            <span className="font-mono text-slate-700">
+              today ∈ [start_date, end_date]
+            </span>
+            .
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Daily table */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-        <div>
-          <div className="text-sm font-semibold">Daily timetable</div>
-          <p className="mt-1 text-xs text-slate-400">
+      <Card className="overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <div className="text-sm font-semibold text-slate-900">
+            Daily timetable
+          </div>
+          <p className="mt-0.5 text-xs text-slate-500">
             Edit Suhoor end and Iftar time for each day. (Safe to upsert.)
           </p>
         </div>
 
         {!startDate || !endDate ? (
-          <div className="mt-4 text-xs text-slate-400">
+          <div className="px-5 py-6 text-sm text-slate-500">
             Set a start and end date to generate the daily table.
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-[11px] uppercase tracking-wide text-slate-500">
-                <tr className="border-b border-slate-800">
-                  <th className="py-2 pr-3">Date</th>
-                  <th className="py-2 pr-3">Day #</th>
-                  <th className="py-2 pr-3">Suhoor ends</th>
-                  <th className="py-2 pr-3">Iftar</th>
-                  <th className="py-2 pr-3">Status</th>
+              <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Day #</th>
+                  <th className="px-5 py-3">Suhoor ends</th>
+                  <th className="px-5 py-3">Iftar</th>
+                  <th className="px-5 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {daysInRange.map((d, idx) => {
                   const row = daysMap[d] ?? { suhoor: "", iftar: "" };
                   const isToday = d === todayIso;
                   const filled = !!row.suhoor && !!row.iftar;
 
                   return (
-                    <tr key={d} className="border-b border-slate-900/60">
-                      <td className="py-2 pr-3">
+                    <tr
+                      key={d}
+                      className={isToday ? "bg-emerald-50/40" : undefined}
+                    >
+                      <td className="px-5 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-[12px] text-slate-200">{d}</span>
-                          {isToday && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200">
-                              Today
-                            </span>
-                          )}
+                          <span className="font-mono text-xs text-slate-700">
+                            {d}
+                          </span>
+                          {isToday && <Badge tone="emerald">Today</Badge>}
                         </div>
                       </td>
-                      <td className="py-2 pr-3 text-slate-400">{idx + 1}</td>
-                      <td className="py-2 pr-3">
+                      <td className="px-5 py-3 text-slate-500">{idx + 1}</td>
+                      <td className="px-5 py-3">
                         <input
                           type="time"
                           value={row.suhoor}
                           onChange={(e) => updateDay(d, "suhoor", e.target.value)}
-                          className="w-36 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                          className={`${inputCls} w-36`}
                         />
                       </td>
-                      <td className="py-2 pr-3">
+                      <td className="px-5 py-3">
                         <input
                           type="time"
                           value={row.iftar}
                           onChange={(e) => updateDay(d, "iftar", e.target.value)}
-                          className="w-36 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+                          className={`${inputCls} w-36`}
                         />
                       </td>
-                      <td className="py-2 pr-3">
+                      <td className="px-5 py-3">
                         {filled ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200">
-                            Ready
-                          </span>
+                          <Badge tone="emerald">Ready</Badge>
                         ) : (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full border border-slate-700 bg-slate-900 text-slate-400">
-                            Missing
-                          </span>
+                          <Badge tone="slate">Missing</Badge>
                         )}
                       </td>
                     </tr>
@@ -626,7 +624,7 @@ export default function RamadanPage() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

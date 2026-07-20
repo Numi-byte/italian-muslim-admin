@@ -8,6 +8,7 @@ import React, {
 
 import { useAuth } from "../auth/authContext";
 import { supabase } from "../lib/supabaseClient";
+import { Alert, Button, LoadingBlock } from "../components/ui";
 
 type SortDirection = "asc" | "desc";
 
@@ -232,23 +233,16 @@ const AnalyticsPage: React.FC = () => {
     Boolean(data?.dailyFrequency.length);
 
   if (loading) {
-    return (
-      <div className="min-h-[320px] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2 text-xs text-slate-400">
-          <div className="h-6 w-6 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-          <span>Loading live analytics...</span>
-        </div>
-      </div>
-    );
+    return <LoadingBlock label="Loading live analytics…" />;
   }
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.03]">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-slate-950">
+            <h2 className="text-base font-semibold text-slate-900">
               Live app analytics
             </h2>
             <LiveBadge status={liveStatus} />
@@ -284,23 +278,19 @@ const AnalyticsPage: React.FC = () => {
           </FilterSelect>
           <DisabledFilter label="Platform" value="View needed" />
           <DisabledFilter label="Version" value="View needed" />
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={() => void fetchAnalytics()}
-            className="h-9 rounded-md border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
             disabled={refreshing}
           >
-            {refreshing ? "Refreshing" : "Refresh"}
-          </button>
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </Button>
         </div>
       </div>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
-          {error}
-        </div>
-      )}
+      {error && <Alert tone="error">{error}</Alert>}
 
       {!hasAnyData && !error && (
         <EmptyPanel title="No analytics yet">
@@ -498,14 +488,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
   detail,
   formatter = formatNumber,
 }) => (
-  <div className="min-h-28 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-    <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
+  <div className="min-h-28 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/[0.03] transition hover:border-slate-300">
+    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
       {label}
     </div>
-    <div className="mt-3 text-2xl font-semibold text-slate-950">
+    <div className="mt-3 text-2xl font-bold text-slate-900">
       {formatter(value)}
     </div>
-    <div className="mt-2 text-[11px] leading-4 text-slate-500">{detail}</div>
+    <div className="mt-2 text-[11px] leading-4 text-slate-400">{detail}</div>
   </div>
 );
 
@@ -516,12 +506,12 @@ type PanelProps = {
 };
 
 const Panel: React.FC<PanelProps> = ({ title, subtitle, children }) => (
-  <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div className="border-b border-slate-200 px-4 py-3">
-      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-      <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p>
+  <section className="rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03]">
+    <div className="border-b border-slate-100 px-5 py-4">
+      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      <p className="mt-0.5 text-[11px] text-slate-500">{subtitle}</p>
     </div>
-    <div className="p-4">{children}</div>
+    <div className="p-5">{children}</div>
   </section>
 );
 
@@ -529,8 +519,8 @@ const EmptyPanel: React.FC<{ title: string; children: ReactNode }> = ({
   title,
   children,
 }) => (
-  <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-    <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.03]">
+    <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
     <p className="mt-2 text-xs text-slate-500">{children}</p>
   </div>
 );
@@ -561,12 +551,12 @@ const FilterSelect: React.FC<{
   onChange: (value: string) => void;
   children: ReactNode;
 }> = ({ label, value, onChange, children }) => (
-  <label className="flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-[11px] text-slate-500 shadow-sm">
+  <label className="flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[11px] font-medium text-slate-500 shadow-sm">
     {label}
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="bg-transparent text-slate-900 outline-none"
+      className="bg-transparent font-semibold text-slate-900 outline-none"
     >
       {children}
     </select>
@@ -577,9 +567,9 @@ const DisabledFilter: React.FC<{ label: string; value: string }> = ({
   label,
   value,
 }) => (
-  <div className="flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] text-slate-500 opacity-80">
+  <div className="flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-[11px] text-slate-400">
     <span>{label}</span>
-    <span className="text-slate-600">{value}</span>
+    <span className="text-slate-500">{value}</span>
   </div>
 );
 
@@ -660,7 +650,7 @@ const DataTable = <T extends Record<string, unknown>>({
 };
 
 const TableEmptyState: React.FC<{ label: string }> = ({ label }) => (
-  <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-xs text-slate-500">
+  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-8 text-center text-xs text-slate-500">
     {label}
   </div>
 );
@@ -733,7 +723,7 @@ const LineChart: React.FC<LineChartProps> = ({ rows, xKey, series }) => {
           x2={width - padding}
           y1={height - padding}
           y2={height - padding}
-          stroke="#334155"
+          stroke="#e2e8f0"
         />
         {series.map((item) => (
           <polyline

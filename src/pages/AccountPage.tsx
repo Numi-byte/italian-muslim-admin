@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../auth/authContext";
+import { Alert, Badge, Button, Spinner } from "../components/ui";
 
 type PremiumStatus = {
   user_id: string;
@@ -36,9 +37,9 @@ type AccountPageProps = {
 };
 
 const panelClass =
-  "rounded-lg border border-slate-800 bg-slate-950 p-4 text-slate-100 shadow-sm";
+  "rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm shadow-slate-900/[0.03]";
 const labelClass =
-  "text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500";
+  "text-[11px] font-semibold uppercase tracking-wide text-slate-500";
 
 const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
   const {
@@ -144,7 +145,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
     return (
       <div className={panelClass}>
         <h2 className="text-base font-semibold">Account unavailable</h2>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-slate-500">
           Sign in again to view your account.
         </p>
       </div>
@@ -153,40 +154,32 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">
-            Account & purchases
-          </h2>
-          <p className="text-sm text-slate-500">
-            {user.email ?? "Signed in account"} - {accessLabel}
-          </p>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-slate-500">
+          Signed in as{" "}
+          <span className="font-medium text-slate-700">
+            {user.email ?? "this account"}
+          </span>{" "}
+          · {accessLabel}
+        </p>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="secondary"
             onClick={() => void loadAccount()}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            disabled={loading}
           >
-            {loading ? "Refreshing..." : "Refresh"}
-          </button>
+            {loading ? "Refreshing…" : "Refresh"}
+          </Button>
           {onContactSupport && (
-            <button
-              type="button"
-              onClick={onContactSupport}
-              className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
-            >
+            <Button size="sm" onClick={onContactSupport}>
               Contact support
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          {error}
-        </div>
-      )}
+      {error && <Alert tone="warning">{error}</Alert>}
 
       <div className="grid gap-3 md:grid-cols-3">
         <StatusCard
@@ -222,16 +215,16 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
           </dl>
 
           {assignedMasjids.length > 0 && (
-            <div className="mt-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-              <div className="text-xs font-semibold text-emerald-200">
+            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <div className="text-xs font-semibold text-emerald-800">
                 Assigned masjid timing access
               </div>
-              <div className="mt-2 space-y-2">
+              <div className="mt-2 space-y-1.5">
                 {assignedMasjids.map((masjid) => (
-                  <div key={masjid.id} className="text-sm text-slate-200">
+                  <div key={masjid.id} className="text-sm text-slate-700">
                     {masjid.official_name}
                     {masjid.city ? (
-                      <span className="text-slate-500"> - {masjid.city}</span>
+                      <span className="text-slate-400"> · {masjid.city}</span>
                     ) : null}
                   </div>
                 ))}
@@ -243,9 +236,9 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
         <section className={panelClass}>
           <div className={labelClass}>Premium entitlement</div>
           {loading ? (
-            <div className="mt-4 flex items-center gap-2 text-sm text-slate-400">
-              <div className="h-4 w-4 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-              Loading purchase status...
+            <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
+              <Spinner />
+              Loading purchase status…
             </div>
           ) : premium ? (
             <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
@@ -280,7 +273,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
               />
             </dl>
           ) : (
-            <div className="mt-4 rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-400">
+            <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 text-sm text-slate-500">
               No premium or one-time purchase is linked to this login yet.
             </div>
           )}
@@ -291,53 +284,49 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className={labelClass}>Purchase events</div>
-            <h3 className="mt-1 text-base font-semibold text-slate-100">
+            <h3 className="mt-1 text-base font-semibold text-slate-900">
               Recent purchase history
             </h3>
           </div>
-          <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-slate-300">
-            {purchaseEvents.length} events
-          </span>
+          <Badge tone="slate">{purchaseEvents.length} events</Badge>
         </div>
 
         {purchaseEvents.length === 0 ? (
-          <div className="mt-4 rounded-lg border border-dashed border-slate-700 p-4 text-sm text-slate-400">
+          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 text-sm text-slate-500">
             No purchase events have been recorded for this account.
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-full text-left text-xs">
-              <thead className="border-b border-slate-800 text-[10px] uppercase tracking-wide text-slate-500">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="px-3 py-2 font-semibold">Date</th>
-                  <th className="px-3 py-2 font-semibold">Event</th>
-                  <th className="px-3 py-2 font-semibold">Status</th>
-                  <th className="px-3 py-2 font-semibold">Platform</th>
-                  <th className="px-3 py-2 font-semibold">Product</th>
-                  <th className="px-3 py-2 font-semibold">Transaction</th>
+                  <th className="px-3 py-2.5 font-semibold">Date</th>
+                  <th className="px-3 py-2.5 font-semibold">Event</th>
+                  <th className="px-3 py-2.5 font-semibold">Status</th>
+                  <th className="px-3 py-2.5 font-semibold">Platform</th>
+                  <th className="px-3 py-2.5 font-semibold">Product</th>
+                  <th className="px-3 py-2.5 font-semibold">Transaction</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-900">
+              <tbody className="divide-y divide-slate-100">
                 {purchaseEvents.map((event) => (
-                  <tr key={event.id} className="align-top text-slate-300">
+                  <tr key={event.id} className="align-top text-slate-600">
                     <td className="whitespace-nowrap px-3 py-3">
                       {formatDateTime(event.created_at)}
                     </td>
-                    <td className="px-3 py-3 font-medium text-slate-100">
+                    <td className="px-3 py-3 font-medium text-slate-900">
                       {humanize(event.event_type)}
                     </td>
                     <td className="px-3 py-3">
-                      <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
-                        {humanize(event.status)}
-                      </span>
+                      <Badge tone="slate">{humanize(event.status)}</Badge>
                     </td>
                     <td className="px-3 py-3">
                       {formatPlatform(event.platform)}
                     </td>
-                    <td className="px-3 py-3 font-mono text-[11px] text-slate-400">
+                    <td className="px-3 py-3 font-mono text-[11px] text-slate-500">
                       {event.product_id}
                     </td>
-                    <td className="px-3 py-3 font-mono text-[11px] text-slate-400">
+                    <td className="px-3 py-3 font-mono text-[11px] text-slate-500">
                       {maskValue(
                         event.transaction_id ?? event.original_transaction_id
                       )}
@@ -366,8 +355,8 @@ const StatusCard: React.FC<{
         : "border-slate-200 bg-white text-slate-900";
 
   return (
-    <div className={`rounded-lg border p-4 ${toneClass}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] opacity-70">
+    <div className={`rounded-2xl border p-4 shadow-sm shadow-slate-900/[0.03] ${toneClass}`}>
+      <div className="text-[11px] font-semibold uppercase tracking-wide opacity-70">
         {label}
       </div>
       <div className="mt-2 text-lg font-semibold">{value}</div>
@@ -381,11 +370,11 @@ const DetailRow: React.FC<{
   mono?: boolean;
 }> = ({ label, value, mono = false }) => (
   <div>
-    <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+    <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
       {label}
     </dt>
     <dd
-      className={`mt-1 break-words text-slate-200 ${
+      className={`mt-1 break-words text-slate-800 ${
         mono ? "font-mono text-xs" : ""
       }`}
     >

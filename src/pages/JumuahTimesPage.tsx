@@ -1,6 +1,16 @@
 // src/pages/JumuahTimesPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Select,
+  Spinner,
+} from "../components/ui";
+import { CalendarIcon } from "../components/icons";
 
 type Masjid = {
   id: string;
@@ -294,74 +304,65 @@ const JumuahTimesPage: React.FC = () => {
   // -------------------------------------------------------------------
   // UI
   // -------------------------------------------------------------------
+  const inputCls =
+    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15";
+  const fieldLabel = "block text-xs font-semibold uppercase tracking-wide text-slate-500";
+
   return (
     <div className="space-y-5">
       {/* Header row */}
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-950">
-            Jumuʿah schedule
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-slate-500">
+      <Card className="p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <p className="max-w-3xl text-sm leading-6 text-slate-500">
             Define one or more Jumuʿah slots per masjid. Each slot has khutbah &
-            jamāʿah time, optional language and notes, and an active date
-            range. The mobile app will show only currently valid slots.
+            jamāʿah time, optional language and notes, and an active date range.
+            The mobile app shows only currently valid slots.
           </p>
-        </div>
 
-        <div className="grid gap-3 text-xs sm:grid-cols-[minmax(0,1fr)_auto] lg:w-[520px]">
-          <div className="space-y-1.5">
-            <span className="font-medium text-slate-600">Masjid</span>
-            <select
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm"
-              value={selectedMasjidId ?? ""}
-              onChange={(e) => setSelectedMasjidId(e.target.value || null)}
-              disabled={loadingMasjids}
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] lg:w-[520px]">
+            <div className="space-y-1.5">
+              <label className={fieldLabel}>Masjid</label>
+              <Select
+                value={selectedMasjidId ?? ""}
+                onChange={(e) => setSelectedMasjidId(e.target.value || null)}
+                disabled={loadingMasjids}
+              >
+                {masjids.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.official_name} ({m.city})
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <Button
+              className="self-end"
+              onClick={resetFormForCreate}
+              disabled={!selectedMasjidId}
             >
-              {masjids.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.official_name} ({m.city})
-                </option>
-              ))}
-            </select>
+              + Add slot
+            </Button>
           </div>
-
-          <button
-            type="button"
-            onClick={resetFormForCreate}
-            className="self-end rounded-md bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
-            disabled={!selectedMasjidId}
-          >
-            + Add Jumuʿah slot
-          </button>
         </div>
-      </div>
-      </div>
+      </Card>
 
       {/* Message banner */}
       {message && (
-        <div
-          className={`rounded-lg border px-3 py-2 text-xs ${
-            messageType === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
+        <Alert tone={messageType === "success" ? "success" : "error"}>
           {message}
-        </div>
+        </Alert>
       )}
 
       {/* Main 2-column layout */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Left: list */}
-        <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
+        <Card className="space-y-4 p-5 lg:col-span-2">
           <div className="flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <div>
               {selectedMasjid ? (
                 <>
                   Managing Jumuʿah for{" "}
-                  <span className="font-medium text-slate-950">
+                  <span className="font-medium text-slate-900">
                     {selectedMasjid.official_name}
                   </span>{" "}
                   ({selectedMasjid.city}).
@@ -370,7 +371,7 @@ const JumuahTimesPage: React.FC = () => {
                 "Select a masjid to manage Jumuʿah slots."
               )}
             </div>
-            <div className="text-[11px] text-slate-500">
+            <div className="text-[11px] text-slate-400">
               Today:{" "}
               {today.toLocaleDateString("it-IT", {
                 weekday: "short",
@@ -381,76 +382,63 @@ const JumuahTimesPage: React.FC = () => {
           </div>
 
           {loadingRows ? (
-            <div className="text-xs text-slate-500">
-              Loading Jumuʿah slots…
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Spinner /> Loading Jumuʿah slots…
             </div>
           ) : rows.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-500">
-              No Jumuʿah slots configured yet for this masjid. Click{" "}
-              <span className="font-medium text-emerald-700">
-                “Add Jumuʿah slot”
-              </span>{" "}
-              to create the first one.
-            </div>
+            <EmptyState
+              icon={<CalendarIcon />}
+              title="No Jumuʿah slots yet"
+              description="Click “Add slot” to create the first Jumuʿah entry for this masjid."
+            />
           ) : (
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2">
               {rows.map((r) => {
                 const status = getStatus(r, today);
                 const isActive = status === "active";
                 const isFuture = status === "future";
+                const selected = form?.id === r.id;
 
                 return (
                   <button
                     key={r.id}
                     type="button"
                     onClick={() => startEdit(r)}
-                    className="flex w-full flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-left hover:bg-white hover:shadow-sm"
+                    className={`flex w-full flex-col gap-2 rounded-xl border px-4 py-3 text-left transition ${
+                      selected
+                        ? "border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-200"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700">
-                          Slot {r.slot}
-                        </span>
-                        {r.language && (
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700">
-                            {r.language}
-                          </span>
-                        )}
+                        <Badge tone="slate">Slot {r.slot}</Badge>
+                        {r.language && <Badge tone="violet">{r.language}</Badge>}
                       </div>
 
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] ${
-                          isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                            : isFuture
-                            ? "border-sky-200 bg-sky-50 text-sky-800"
-                            : "border-slate-200 bg-white text-slate-600"
-                        }`}
+                      <Badge
+                        tone={isActive ? "emerald" : isFuture ? "sky" : "slate"}
                       >
                         {isActive
                           ? "Active"
                           : isFuture
                           ? "Scheduled"
                           : "Expired"}
-                      </span>
+                      </Badge>
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 text-xs sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex gap-4">
                           <div>
-                            <span className="text-slate-500 mr-1">
-                              Khutbah:
-                            </span>
-                            <span className="font-medium text-slate-950">
+                            <span className="mr-1 text-slate-500">Khutbah:</span>
+                            <span className="font-semibold text-slate-900">
                               {timeToDisplay(r.khutbah_time)}
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500 mr-1">
-                              Jamāʿah:
-                            </span>
-                            <span className="font-medium text-slate-950">
+                            <span className="mr-1 text-slate-500">Jamāʿah:</span>
+                            <span className="font-semibold text-slate-900">
                               {timeToDisplay(r.jamaat_time)}
                             </span>
                           </div>
@@ -462,7 +450,7 @@ const JumuahTimesPage: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="text-[10px] text-slate-500 text-right shrink-0">
+                      <div className="shrink-0 text-right text-[11px] text-slate-400">
                         {r.valid_from || r.valid_to ? (
                           <>
                             {r.valid_from ?? "…"} → {r.valid_to ?? "…"}
@@ -477,111 +465,97 @@ const JumuahTimesPage: React.FC = () => {
               })}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Right: editor */}
-        <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-900">
-                {form ? (form.id ? "Edit Jumuʿah slot" : "New Jumuʿah slot") : "Jumuʿah editor"}
-              </div>
-              <div className="text-[11px] text-slate-500">
-                {form
-                  ? "Adjust slot details and save. Changes apply immediately in the mobile app."
-                  : "Select a slot from the list or click “Add Jumuʿah slot” to create one."}
-              </div>
+        <Card className="flex flex-col gap-3 p-5">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              {form
+                ? form.id
+                  ? "Edit Jumuʿah slot"
+                  : "New Jumuʿah slot"
+                : "Jumuʿah editor"}
+            </div>
+            <div className="text-xs text-slate-500">
+              {form
+                ? "Adjust slot details and save. Changes apply immediately in the mobile app."
+                : "Select a slot from the list or click “Add slot” to create one."}
             </div>
           </div>
 
           {!form ? (
-            <div className="mt-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-[11px] text-slate-500">
+            <div className="mt-1 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-4 text-xs text-slate-500">
               No slot selected. Click{" "}
-              <span className="font-medium text-emerald-700">
-                “Add Jumuʿah slot”
-              </span>{" "}
-              or choose one from the list to edit.
+              <span className="font-medium text-emerald-700">“Add slot”</span> or
+              choose one from the list to edit.
             </div>
           ) : (
             <form
-              className="mt-1 space-y-3 text-xs"
+              className="mt-1 space-y-4"
               onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 void handleSave();
               }}
             >
               {/* Slot number */}
-              <div className="space-y-1">
-                <label className="block text-[11px] font-medium text-slate-500">
-                  Slot number
-                </label>
+              <div className="space-y-1.5">
+                <label className={fieldLabel}>Slot number</label>
                 <input
                   type="number"
                   min={1}
                   max={5}
                   value={form.slot}
                   onChange={(e) => handleChange("slot", e.target.value)}
-                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                  className={inputCls}
                   placeholder="1, 2, 3…"
                 />
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[11px] text-slate-400">
                   Use 1 for first Jumuʿah, 2 for second, etc.
                 </p>
               </div>
 
               {/* Times */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Khutbah time
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Khutbah time</label>
                   <input
                     type="time"
                     value={form.khutbah_time}
-                    onChange={(e) =>
-                      handleChange("khutbah_time", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    onChange={(e) => handleChange("khutbah_time", e.target.value)}
+                    className={inputCls}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Jamāʿah time
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Jamāʿah time</label>
                   <input
                     type="time"
                     value={form.jamaat_time}
-                    onChange={(e) =>
-                      handleChange("jamaat_time", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    onChange={(e) => handleChange("jamaat_time", e.target.value)}
+                    className={inputCls}
                   />
                 </div>
               </div>
 
               {/* Language & notes */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Language (optional)
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Language (optional)</label>
                   <input
                     type="text"
                     value={form.language}
                     onChange={(e) => handleChange("language", e.target.value)}
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    className={inputCls}
                     placeholder="Italian, Arabic, Urdu…"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Notes (optional)
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Notes (optional)</label>
                   <input
                     type="text"
                     value={form.notes}
                     onChange={(e) => handleChange("notes", e.target.value)}
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    className={inputCls}
                     placeholder="Capacity, brothers only, youth group…"
                   />
                 </div>
@@ -589,81 +563,64 @@ const JumuahTimesPage: React.FC = () => {
 
               {/* Validity range */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Valid from (optional)
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Valid from (optional)</label>
                   <input
                     type="date"
                     value={form.valid_from}
-                    onChange={(e) =>
-                      handleChange("valid_from", e.target.value)
-                    }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    onChange={(e) => handleChange("valid_from", e.target.value)}
+                    className={inputCls}
                   />
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[11px] text-slate-400">
                     Leave empty to make it valid immediately.
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-medium text-slate-500">
-                    Valid until (optional)
-                  </label>
+                <div className="space-y-1.5">
+                  <label className={fieldLabel}>Valid until (optional)</label>
                   <input
                     type="date"
                     value={form.valid_to}
                     onChange={(e) => handleChange("valid_to", e.target.value)}
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-950 shadow-sm"
+                    className={inputCls}
                   />
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-[11px] text-slate-400">
                     Leave empty if the slot should stay until you change it.
                   </p>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="pt-2 flex flex-wrap gap-2 justify-between items-center">
-                <div className="text-[11px] text-slate-500">
-                  {form.id ? (
-                    <>Editing existing Jumuʿah slot (ID {form.id}).</>
-                  ) : (
-                    <>Creating a new Jumuʿah slot for this masjid.</>
-                  )}
+              <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
+                <div className="text-[11px] text-slate-400">
+                  {form.id
+                    ? `Editing existing Jumuʿah slot (ID ${form.id}).`
+                    : "Creating a new Jumuʿah slot for this masjid."}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   {form.id && (
-                    <button
-                      type="button"
+                    <Button
+                      variant="danger"
                       onClick={() => void handleDelete()}
                       disabled={deleting || saving}
-                      className="px-3 py-1.5 rounded-lg border border-red-500/70 text-[11px] text-red-200 hover:bg-red-500/10 disabled:opacity-50"
                     >
                       {deleting ? "Deleting…" : "Delete"}
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setForm(null)}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                  >
+                  <Button variant="secondary" onClick={() => setForm(null)}>
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-md bg-emerald-700 px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
-                  >
+                  </Button>
+                  <Button type="submit" disabled={saving}>
                     {saving
                       ? "Saving…"
                       : form.id
                       ? "Save changes"
                       : "Create slot"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </form>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

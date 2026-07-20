@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/authContext";
 import { supabase } from "../lib/supabaseClient";
+import { Alert, Badge, Button, Card } from "../components/ui";
 
 type Masjid = {
   id: string;
@@ -103,9 +104,9 @@ const initialForm: FormState = {
 };
 
 const inputClass =
-  "w-full rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-100 outline-none focus:border-emerald-400";
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15";
 
-const labelClass = "mb-1 block text-[11px] text-slate-300";
+const labelClass = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500";
 
 const sponsoredAdsBucket = "prayer-sponsored-ads";
 const maxImageSizeBytes = 5 * 1024 * 1024;
@@ -575,47 +576,39 @@ const SponsoredAdsPage: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-slate-100">
-            Sponsored Prayers card
-          </h2>
-          <p className="text-xs text-slate-400">
-            Create ads for the mobile app placement{" "}
-            <span className="font-mono text-emerald-300">prayers_home</span>.
-            App-wide ads leave masjid empty; active ads are eligible to publish.
-          </p>
-        </div>
-        <button
-          type="button"
+        <p className="max-w-3xl text-sm leading-6 text-slate-500">
+          Create ads for the mobile app placement{" "}
+          <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-emerald-700">
+            prayers_home
+          </code>
+          . App-wide ads leave masjid empty; active ads are eligible to publish.
+        </p>
+        <Button
+          size="sm"
+          variant="secondary"
           onClick={() => void loadData()}
-          className="self-start rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-slate-800"
+          disabled={loading}
         >
-          {loading ? "Loading..." : "Refresh"}
-        </button>
+          {loading ? "Loading…" : "Refresh"}
+        </Button>
       </div>
 
       {message && (
-        <div
-          className={`rounded-md border px-3 py-2 text-xs ${
-            messageType === "success"
-              ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
-              : "border-red-500/60 bg-red-500/10 text-red-200"
-          }`}
-        >
+        <Alert tone={messageType === "success" ? "success" : "error"}>
           {message}
-        </div>
+        </Alert>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <form
           onSubmit={handleSave}
-          className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-xs"
+          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.03]"
         >
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-100">
+            <h3 className="text-sm font-semibold text-slate-900">
               {editingAd ? "Edit sponsored ad" : "New sponsored ad"}
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               {editingAd
                 ? "Changes update the existing mobile ad."
                 : "Keep titles short enough for one mobile line."}
@@ -632,7 +625,7 @@ const SponsoredAdsPage: React.FC = () => {
                 placeholder="Paste UUID or choose a lead on the right"
               />
               {selectedApplication && (
-                <p className="mt-1 text-[10px] text-emerald-300">
+                <p className="mt-1 text-[11px] font-medium text-emerald-600">
                   Linked to {selectedApplication.business_name}
                 </p>
               )}
@@ -733,27 +726,27 @@ const SponsoredAdsPage: React.FC = () => {
               <label className={labelClass}>Upload image</label>
               <input
                 key={imageInputKey}
-                className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:text-slate-100`}
+                className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-emerald-700`}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleImageFileChange}
               />
-              <p className="mt-1 text-[10px] text-slate-500">
+              <p className="mt-1 text-[11px] text-slate-400">
                 JPG, PNG, or WebP. Max 5 MB. Uploaded to{" "}
-                <span className="font-mono text-slate-400">
+                <span className="font-mono text-slate-500">
                   {sponsoredAdsBucket}
                 </span>
                 .
               </p>
               {imageFile && (
-                <p className="mt-1 text-[10px] text-emerald-300">
+                <p className="mt-1 text-[11px] font-medium text-emerald-600">
                   Ready to upload: {imageFile.name}
                 </p>
               )}
               {editingAd?.image_path && !imageFile && (
-                <p className="mt-1 text-[10px] text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-400">
                   Current storage path:{" "}
-                  <span className="font-mono text-slate-400">
+                  <span className="font-mono text-slate-500">
                     {editingAd.image_path}
                   </span>
                 </p>
@@ -797,42 +790,32 @@ const SponsoredAdsPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={clearForm}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] text-slate-200 hover:bg-slate-900"
-            >
+          <div className="mt-5 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={clearForm}>
               {editingAd ? "Cancel edit" : "Clear"}
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-emerald-500 px-4 py-1.5 text-[11px] font-semibold text-emerald-950 disabled:opacity-60"
-            >
+            </Button>
+            <Button type="submit" disabled={saving}>
               {saving
-                ? "Saving..."
+                ? "Saving…"
                 : editingAd
                   ? "Save changes"
                   : "Create ad"}
-            </button>
+            </Button>
           </div>
         </form>
 
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-xs">
+          <Card className="p-5">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-100">
+                <h3 className="text-sm font-semibold text-slate-900">
                   Sponsorship leads
                 </h3>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   Website and mobile applications from the sponsorship table.
                 </p>
               </div>
-              <span className="rounded-full bg-slate-900 px-2 py-1 text-[10px] text-slate-300">
-                {applications.length}
-              </span>
+              <Badge tone="slate">{applications.length}</Badge>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
@@ -857,72 +840,72 @@ const SponsoredAdsPage: React.FC = () => {
             </div>
 
             {applicationsError ? (
-              <div className="mt-3 rounded-lg border border-red-500/60 bg-red-500/10 p-3 text-red-200">
+              <Alert tone="error" className="mt-3">
                 Could not read sponsorship applications: {applicationsError}
-                <div className="mt-2 text-[11px] text-red-100/80">
+                <div className="mt-2 text-[11px] opacity-80">
                   Run the super-admin sponsorship RLS SQL. This area checks
                   profiles.role = super_admin or the configured owner user id,
                   and does not use digital_register_users.
                 </div>
-              </div>
+              </Alert>
             ) : applications.length === 0 ? (
-              <div className="mt-3 rounded-lg border border-dashed border-slate-700 p-4 text-slate-400">
+              <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 text-sm text-slate-500">
                 No applications are visible to this admin account. If mobile
                 submissions exist, this is usually a sponsorship RLS mismatch
                 for the super_admin profile or the rows are in a different
                 Supabase project.
-                <div className="mt-3 rounded-md bg-slate-900/80 p-2 font-mono text-[10px] text-slate-500">
+                <div className="mt-3 rounded-lg bg-slate-100 p-2 font-mono text-[10px] text-slate-500">
                   signed in: {user?.email ?? "unknown"} · profile role:{" "}
                   {profile?.role ?? "none"}
                 </div>
               </div>
             ) : filteredApplications.length === 0 ? (
-              <div className="mt-3 rounded-lg border border-dashed border-slate-700 p-4 text-slate-400">
+              <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 text-sm text-slate-500">
                 No applications match this search.
               </div>
             ) : (
               <div className="mt-3 max-h-[520px] space-y-3 overflow-y-auto pr-1">
-                {filteredApplications.map((app) => (
+                {filteredApplications.map((app) => {
+                  const selected = form.application_id === app.id;
+                  return (
                   <button
                     key={app.id}
                     type="button"
                     onClick={() => applyApplicationForAd(app)}
-                    className={`w-full rounded-lg border p-3 text-left hover:bg-slate-900 ${
-                      form.application_id === app.id
-                        ? "border-emerald-500/70 bg-emerald-500/10"
-                        : "border-slate-800 bg-slate-950"
+                    className={`w-full rounded-xl border p-3 text-left transition ${
+                      selected
+                        ? "border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-200"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
                     {app.logo_image_url && (
                       <img
                         src={app.logo_image_url}
                         alt=""
-                        className="mb-3 h-24 w-full rounded-md border border-slate-800 object-cover"
+                        className="mb-3 h-24 w-full rounded-lg border border-slate-200 object-cover"
                       />
                     )}
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="font-semibold text-slate-100">
+                        <div className="font-semibold text-slate-900">
                           {app.business_name}
                         </div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-slate-500">
                           {app.city ?? "No city"} ·{" "}
                           {app.contact_name ?? "No contact"}
                         </div>
                       </div>
-                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-200">
-                        {app.status ?? "new"}
-                      </span>
+                      <Badge tone="slate">{app.status ?? "new"}</Badge>
                     </div>
                     <div className="mt-2 text-[11px] text-slate-500">
                       {app.offer_type ?? "No offer type"} ·{" "}
                       {app.source ?? "unknown source"} ·{" "}
                       {app.created_at.slice(0, 10)}
                     </div>
-                    <div className="mt-1 truncate font-mono text-[10px] text-slate-600">
+                    <div className="mt-1 truncate font-mono text-[10px] text-slate-400">
                       {app.id}
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] text-slate-300">
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] text-slate-600">
                       {[
                         app.business_category,
                         app.business_model,
@@ -938,7 +921,7 @@ const SponsoredAdsPage: React.FC = () => {
                         .map((value) => (
                           <span
                             key={value}
-                            className="rounded-full bg-slate-900 px-2 py-0.5"
+                            className="rounded-full bg-slate-100 px-2 py-0.5"
                           >
                             {value}
                           </span>
@@ -953,16 +936,16 @@ const SponsoredAdsPage: React.FC = () => {
 
                         return (
                           <div key={group.title}>
-                            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                               {group.title}
                             </div>
                             <dl className="grid gap-x-3 gap-y-1 sm:grid-cols-2">
                               {rows.map(([label, value]) => (
                                 <div key={label} className="min-w-0">
-                                  <dt className="text-[10px] text-slate-500">
+                                  <dt className="text-[10px] text-slate-400">
                                     {label}
                                   </dt>
-                                  <dd className="break-words text-[11px] text-slate-300">
+                                  <dd className="break-words text-[11px] text-slate-700">
                                     {present(value)}
                                   </dd>
                                 </div>
@@ -973,27 +956,28 @@ const SponsoredAdsPage: React.FC = () => {
                       })}
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             )}
-          </div>
+          </Card>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-xs">
-            <h3 className="mb-3 text-sm font-semibold text-slate-100">
+          <Card className="p-5">
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">
               Existing ads
             </h3>
             {adsError && (
-              <div className="mb-3 rounded-lg border border-red-500/60 bg-red-500/10 p-3 text-red-200">
+              <Alert tone="error" className="mb-3">
                 Could not read sponsored ads: {adsError}
-              </div>
+              </Alert>
             )}
             {masjidsError && (
-              <div className="mb-3 rounded-lg border border-red-500/60 bg-red-500/10 p-3 text-red-200">
+              <Alert tone="error" className="mb-3">
                 Could not read masjids: {masjidsError}
-              </div>
+              </Alert>
             )}
             {ads.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-700 p-4 text-slate-400">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 text-sm text-slate-500">
                 No sponsored ads yet.
               </div>
             ) : (
@@ -1001,65 +985,62 @@ const SponsoredAdsPage: React.FC = () => {
                 {ads.map((ad) => (
                   <div
                     key={ad.id}
-                    className="rounded-lg border border-slate-800 bg-slate-950 p-3"
+                    className="rounded-xl border border-slate-200 bg-white p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="font-semibold text-slate-100">
+                        <div className="font-semibold text-slate-900">
                           {ad.title}
                         </div>
-                        <div className="text-[11px] text-slate-400">
-                          {ad.business_name ?? "No business name"} - priority{" "}
+                        <div className="text-[11px] text-slate-500">
+                          {ad.business_name ?? "No business name"} · priority{" "}
                           {ad.priority}
                         </div>
                       </div>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      <Badge
+                        tone={
                           ad.status === "active"
-                            ? "bg-emerald-500 text-emerald-950"
+                            ? "emerald"
                             : ad.status === "paused"
-                            ? "bg-amber-400 text-amber-950"
-                            : ad.status === "expired" ||
-                              ad.status === "archived"
-                            ? "bg-slate-800 text-slate-300"
-                            : "bg-slate-700 text-slate-100"
-                        }`}
+                            ? "amber"
+                            : "slate"
+                        }
                       >
                         {ad.status}
-                      </span>
+                      </Badge>
                     </div>
                     <div className="mt-2 text-[11px] text-slate-500">
                       {ad.starts_on}
-                      {ad.ends_on ? ` to ${ad.ends_on}` : " onward"} -{" "}
+                      {ad.ends_on ? ` to ${ad.ends_on}` : " onward"} ·{" "}
                       {ad.masjid_id ? "masjid-specific" : "app-wide"}
                     </div>
                     {ad.image_url && (
-                      <div className="mt-3 flex gap-3 rounded-md border border-slate-800 bg-slate-900/50 p-2">
+                      <div className="mt-3 flex gap-3 rounded-lg border border-slate-200 bg-slate-50 p-2">
                         <img
                           src={ad.image_url}
                           alt=""
                           className="h-16 w-24 rounded object-cover"
                         />
-                        <div className="min-w-0 text-[10px] text-slate-500">
-                          <div className="truncate text-slate-300">
+                        <div className="min-w-0 text-[10px] text-slate-400">
+                          <div className="truncate text-slate-600">
                             {ad.image_path ?? "External image URL"}
                           </div>
                           <a
                             href={ad.image_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-1 block truncate text-emerald-300 hover:text-emerald-200"
+                            className="mt-1 block truncate text-emerald-600 hover:text-emerald-700"
                           >
                             {ad.image_url}
                           </a>
                         </div>
                       </div>
                     )}
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                       <button
                         type="button"
                         onClick={() => editAd(ad)}
-                        className="rounded-full border border-emerald-500/60 px-2 py-1 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-500/10"
+                        className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100"
                       >
                         Edit
                       </button>
@@ -1076,7 +1057,7 @@ const SponsoredAdsPage: React.FC = () => {
                           key={status}
                           type="button"
                           onClick={() => void updateStatus(ad.id, status)}
-                          className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-200 hover:bg-slate-900 disabled:opacity-40"
+                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
                           disabled={ad.status === status}
                         >
                           {status}
@@ -1087,7 +1068,7 @@ const SponsoredAdsPage: React.FC = () => {
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
