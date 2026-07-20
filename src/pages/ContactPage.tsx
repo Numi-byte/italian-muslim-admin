@@ -42,14 +42,14 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
   embedded = false,
   defaultTopic = "purchase",
 }) => {
-  // The panel is reused on the dark public /contact page and inside the
-  // light admin console (embedded). Style it to match its surroundings.
+  // The panel is reused inside the light admin console (embedded) and on the
+  // public /contact page. Style it to match its surroundings.
   const inputClass = embedded
     ? "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
-    : "w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400";
+    : "w-full rounded-xl border border-[#e7e1d3] bg-[#faf8f1] px-3.5 py-2.5 text-sm text-[#1c2b26] outline-none transition placeholder:text-[#b0a483] focus:border-[#0f5c46] focus:ring-4 focus:ring-[#0f5c46]/12";
   const labelClass = embedded
     ? "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
-    : "mb-1 block text-[11px] font-semibold text-slate-300";
+    : "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#9a8c68]";
   const { session, user } = useAuth();
   const location = useLocation();
   const queryTopic = useMemo(() => {
@@ -142,7 +142,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
         name: prev.name,
         email: prev.email,
       }));
-      setNotice(`Message received for ${SUPPORT_EMAIL}.`);
+      setNotice("Thank you — your message has been sent.");
       setNoticeType("success");
     } finally {
       setSubmitting(false);
@@ -154,30 +154,32 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
       className={
         embedded
           ? "rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm shadow-slate-900/[0.03] sm:p-6"
-          : "rounded-lg border border-slate-800 bg-slate-950 p-5 text-slate-100 shadow-2xl shadow-black/20"
+          : "rounded-2xl border border-[#e7e1d3] bg-white p-5 text-[#1c2b26] shadow-xl shadow-[#0a3d30]/10 sm:p-7"
       }
     >
       <div className="mb-5">
         <p
-          className={`text-[11px] font-bold uppercase tracking-[0.2em] ${
-            embedded ? "text-emerald-700" : "text-emerald-300"
+          className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${
+            embedded ? "text-emerald-700" : "text-[#9a8c68]"
           }`}
         >
           Support
         </p>
         <h1
-          className={`mt-2 text-2xl font-semibold ${
-            embedded ? "text-slate-900" : "text-white"
+          className={`mt-2 font-semibold ${
+            embedded
+              ? "text-2xl text-slate-900"
+              : "font-display text-3xl text-[#1c2b26]"
           }`}
         >
-          Contact UmmahWay
+          Send us a message
         </h1>
         <p
           className={`mt-2 text-sm leading-6 ${
-            embedded ? "text-slate-500" : "text-slate-400"
+            embedded ? "text-slate-500" : "text-[#6b7a74]"
           }`}
         >
-          Messages are received for {SUPPORT_EMAIL}.
+          We'll reply to the email address you provide below.
         </p>
       </div>
 
@@ -187,10 +189,10 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
             noticeType === "success"
               ? embedded
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-emerald-500/60 bg-emerald-500/10 text-emerald-200"
+                : "border-[#0f5c46]/25 bg-[#0f5c46]/[0.06] text-[#0a3d30]"
               : embedded
                 ? "border-rose-200 bg-rose-50 text-rose-700"
-                : "border-red-500/60 bg-red-500/10 text-red-200"
+                : "border-rose-200 bg-rose-50 text-rose-700"
           }`}
         >
           {notice}
@@ -264,7 +266,11 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
             maxLength={5000}
             onChange={(event) => setField("message", event.target.value)}
           />
-          <div className="mt-1 text-right text-[10px] text-slate-500">
+          <div
+            className={`mt-1 text-right text-[10px] ${
+              embedded ? "text-slate-500" : "text-[#9a8c68]"
+            }`}
+          >
             {form.message.length}/5000
           </div>
         </div>
@@ -272,9 +278,13 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-md bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
+          className={
+            embedded
+              ? "w-full rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
+              : "w-full rounded-xl bg-[#0f5c46] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0a3d30]/15 transition hover:bg-[#0a3d30] disabled:opacity-60"
+          }
         >
-          {submitting ? "Sending..." : "Send message"}
+          {submitting ? "Sending…" : "Send message"}
         </button>
       </form>
     </section>
@@ -283,45 +293,62 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
 
 const ContactPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      <header className="border-b border-slate-800 bg-slate-950/90">
+    <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26]">
+      <header className="border-b border-[#e7e1d3] bg-[#f7f4ec]/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/icon.png" alt="" className="h-9 w-9 rounded-[8px]" />
+            <img src="/icon.png" alt="" className="h-10 w-10 rounded-lg" />
             <div>
-              <div className="text-sm font-semibold text-white">UmmahWay</div>
-              <div className="text-[10px] text-slate-400">Support</div>
+              <div className="font-display text-lg font-semibold text-[#0a3d30]">
+                UmmahWay
+              </div>
+              <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#9a8c68]">
+                Support
+              </div>
             </div>
           </Link>
           <Link
             to="/"
-            className="rounded-full border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900"
+            className="rounded-lg border border-[#d8cfb8] bg-white px-3.5 py-2 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
           >
             Back home
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-5xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
+      <main className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="space-y-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300">
-              Direct contact
-            </p>
-            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
-              Purchase, account, and masjid timing support.
+            <div className="flex items-center gap-3">
+              <span className="h-px w-8 bg-[#d8cfb8]" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
+                Get in touch
+              </p>
+            </div>
+            <h2 className="mt-2 font-display text-4xl font-semibold leading-tight">
+              We're here to help
             </h2>
-            <p className="mt-4 text-sm leading-6 text-slate-300">
-              Use one form for subscriptions, one-time purchases, login access,
-              and Jamaah timing accounts.
+            <p className="mt-4 text-sm leading-7 text-[#4a5852]">
+              Questions about a purchase, your account, or masjid timings? Send
+              us a note and we'll get back to you.
             </p>
           </div>
 
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
-            <div className="font-semibold text-white">{SUPPORT_EMAIL}</div>
-            <div className="mt-1 text-slate-400">
-              Replies are sent to the email address in your message.
+          <div className="rounded-2xl border border-[#e7e1d3] bg-white p-4 text-sm shadow-sm">
+            <div className="font-semibold text-[#0a3d30]">{SUPPORT_EMAIL}</div>
+            <div className="mt-1 text-[#6b7a74]">
+              Replies go to the email address in your message.
             </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl bg-[#0a3d30] p-5 text-white">
+            <p className="font-arabic text-lg text-[#e6cf9a]">
+              وَقُل رَّبِّ زِدْنِي عِلْمًا
+            </p>
+            <p className="mt-2 text-sm leading-6 text-white/70">
+              For prayer times and notices, visit your masjid's page — each one
+              is kept current by its own team.
+            </p>
           </div>
         </section>
 

@@ -505,6 +505,7 @@ const App: React.FC = () => {
         <Routes>
           {/* Public presentation site */}
           <Route path="/" element={<PublicHomePage />} />
+          <Route path="/masjids" element={<PublicHomePage />} />
           <Route path="/masjids/:slug" element={<MasjidPublicPage />} />
           <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
           <Route path="/contact" element={<ContactPage />} />

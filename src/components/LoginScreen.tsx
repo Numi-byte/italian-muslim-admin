@@ -2,6 +2,36 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/authContext";
 
+// Rub el Hizb star lattice — a quiet backdrop on the deep-green panel.
+const StarLattice: React.FC<{ className?: string; id: string }> = ({
+  className = "",
+  id,
+}) => (
+  <svg aria-hidden="true" className={className} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id={id} width="88" height="88" patternUnits="userSpaceOnUse">
+        <g fill="none" stroke="currentColor" strokeWidth="1">
+          <rect x="27" y="27" width="34" height="34" />
+          <rect
+            x="27"
+            y="27"
+            width="34"
+            height="34"
+            transform="rotate(45 44 44)"
+          />
+        </g>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill={`url(#${id})`} />
+  </svg>
+);
+
+const brandFeatures = [
+  "Daily prayer and jama'ah times",
+  "Jumu'ah slots and khutbah notes",
+  "News and notices for the community",
+];
+
 const LoginScreen: React.FC = () => {
   const { signIn, loading } = useAuth();
   const [email, setEmail] = useState("");
@@ -25,51 +55,63 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050817] px-4 py-6 text-white sm:px-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_8%,rgba(113,228,155,0.18),transparent_34%),radial-gradient(circle_at_82%_0%,rgba(118,80,223,0.2),transparent_32%)]" />
-      <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:64px_64px]" />
+    <div className="relative min-h-screen overflow-hidden bg-[#0a3d30] px-4 py-6 text-white sm:px-6">
+      <StarLattice
+        id="login-lattice"
+        className="absolute inset-0 h-full w-full text-[#e6cf9a] opacity-[0.06]"
+      />
+      <div
+        className="absolute inset-x-0 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(230,207,154,.5), transparent)",
+        }}
+      />
 
       <div className="relative mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl items-center">
-        <div className="grid w-full gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+        <div className="grid w-full gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <section className="hidden lg:block">
             <Link to="/" className="inline-flex items-center gap-3">
-              <img src="/icon.png" alt="" className="h-11 w-11 rounded-[8px]" />
+              <img src="/icon.png" alt="" className="h-11 w-11 rounded-lg" />
               <div>
-                <p className="text-lg font-black">UmmahWay</p>
-                <p className="text-xs font-bold uppercase tracking-wide text-white/45">
+                <p className="font-display text-xl font-semibold">UmmahWay</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#e6cf9a]">
                   Admin console
                 </p>
               </div>
             </Link>
 
             <div className="mt-12 max-w-xl">
-              <p className="text-sm font-black uppercase tracking-wide text-[#71e49b]">
-                Secure masjid management
+              <p className="font-arabic text-2xl text-[#e6cf9a]">
+                بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ
               </p>
-              <h1 className="mt-4 text-6xl font-black leading-[0.95] tracking-normal">
-                Keep every community update official.
+              <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.05] xl:text-6xl">
+                Keep your masjid's page up to date.
               </h1>
-              <p className="mt-6 text-lg leading-8 text-white/65">
-                Manage active masjid pages, daily prayer times, Jumu'ah slots,
-                announcements, Ramadan settings, and sponsorship workflows from
-                one focused workspace.
+              <p className="mt-6 text-lg leading-8 text-white/70">
+                Sign in to manage prayer times, Jumu'ah, announcements and
+                Ramadan settings for your masjid — all from one place.
               </p>
             </div>
 
-            <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
-              {[
-                ["Live", "public pages"],
-                ["Active", "masjid directory"],
-                ["Secure", "admin access"],
-              ].map(([value, label]) => (
-                <div
-                  key={label}
-                  className="rounded-[18px] border border-white/10 bg-white/5 p-4"
-                >
-                  <p className="text-2xl font-black text-[#71e49b]">{value}</p>
-                  <p className="mt-1 text-sm font-bold text-white/45">
-                    {label}
-                  </p>
+            <div className="mt-10 grid max-w-xl gap-3">
+              {brandFeatures.map((item) => (
+                <div key={item} className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 flex-none items-center justify-center rounded-md bg-[#e6cf9a] text-[#0a3d30]">
+                    <svg
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="m5 12 4 4L19 6" />
+                    </svg>
+                  </span>
+                  <span className="text-sm text-white/80">{item}</span>
                 </div>
               ))}
             </div>
@@ -78,42 +120,37 @@ const LoginScreen: React.FC = () => {
           <section className="mx-auto w-full max-w-md">
             <div className="mb-8 flex items-center justify-between lg:hidden">
               <Link to="/" className="flex items-center gap-3">
-                <img
-                  src="/icon.png"
-                  alt=""
-                  className="h-11 w-11 rounded-[8px]"
-                />
+                <img src="/icon.png" alt="" className="h-11 w-11 rounded-lg" />
                 <div>
-                  <p className="text-lg font-black">UmmahWay</p>
-                  <p className="text-xs font-bold uppercase tracking-wide text-white/45">
+                  <p className="font-display text-xl font-semibold">UmmahWay</p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#e6cf9a]">
                     Admin console
                   </p>
                 </div>
               </Link>
             </div>
 
-            <div className="rounded-[30px] border border-white/10 bg-[#0b1224]/88 p-5 shadow-2xl shadow-black/35 backdrop-blur sm:p-7">
-              <div className="rounded-[24px] bg-[#071020] p-5 ring-1 ring-white/5">
-                <p className="text-xs font-black uppercase tracking-wide text-[#71e49b]">
+            <div className="rounded-3xl border border-[#e7e1d3] bg-[#faf8f1] p-5 text-[#1c2b26] shadow-2xl shadow-black/25 sm:p-7">
+              <div className="rounded-2xl border border-[#e7e1d3] bg-white p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8c68]">
                   UmmahWay
                 </p>
-                <h1 className="mt-2 text-3xl font-black tracking-normal">
+                <h1 className="mt-2 font-display text-3xl font-semibold">
                   Admin sign in
                 </h1>
-                <p className="mt-3 text-sm leading-6 text-white/55">
-                  Only authorized masjid and platform administrators can access
-                  this workspace.
+                <p className="mt-2 text-sm leading-6 text-[#6b7a74]">
+                  For masjid and platform administrators.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-sm">
-                <div className="space-y-2">
-                  <label className="block text-xs font-black uppercase tracking-wide text-white/50">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-[#9a8c68]">
                     Email
                   </label>
                   <input
                     type="email"
-                    className="w-full rounded-[16px] border border-white/10 bg-[#050817] px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-white/25 focus:border-[#71e49b] focus:ring-4 focus:ring-[#71e49b]/10"
+                    className="w-full rounded-xl border border-[#e7e1d3] bg-white px-4 py-3 text-sm text-[#1c2b26] outline-none transition placeholder:text-[#b0a483] focus:border-[#0f5c46] focus:ring-4 focus:ring-[#0f5c46]/12"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
@@ -122,13 +159,13 @@ const LoginScreen: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-xs font-black uppercase tracking-wide text-white/50">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-[#9a8c68]">
                     Password
                   </label>
                   <input
                     type="password"
-                    className="w-full rounded-[16px] border border-white/10 bg-[#050817] px-4 py-3 text-sm font-bold text-white outline-none transition placeholder:text-white/25 focus:border-[#71e49b] focus:ring-4 focus:ring-[#71e49b]/10"
+                    className="w-full rounded-xl border border-[#e7e1d3] bg-white px-4 py-3 text-sm text-[#1c2b26] outline-none transition placeholder:text-[#b0a483] focus:border-[#0f5c46] focus:ring-4 focus:ring-[#0f5c46]/12"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
@@ -138,7 +175,7 @@ const LoginScreen: React.FC = () => {
                 </div>
 
                 {error && (
-                  <p className="rounded-[16px] border border-red-400/20 bg-red-500/10 px-4 py-3 text-xs font-bold leading-5 text-red-200">
+                  <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium leading-5 text-rose-700">
                     {error}
                   </p>
                 )}
@@ -146,24 +183,24 @@ const LoginScreen: React.FC = () => {
                 <button
                   type="submit"
                   disabled={busy || loading}
-                  className="flex w-full items-center justify-center rounded-[18px] bg-[#71e49b] px-5 py-3.5 text-sm font-black text-[#04100d] shadow-lg shadow-[#71e49b]/15 transition hover:bg-[#8cf3ae] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex w-full items-center justify-center rounded-xl bg-[#0f5c46] px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#0a3d30]/20 transition hover:bg-[#0a3d30] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {busy || loading ? "Signing in..." : "Sign in"}
+                  {busy || loading ? "Signing in…" : "Sign in"}
                 </button>
               </form>
 
-              <div className="mt-5 flex items-center justify-between gap-4 text-xs font-bold text-white/45">
-                <Link to="/" className="hover:text-[#71e49b]">
+              <div className="mt-5 flex items-center justify-between gap-4 text-xs font-medium text-[#6b7a74]">
+                <Link to="/" className="hover:text-[#0f5c46]">
                   Public site
                 </Link>
-                <Link to="/reset-password" className="hover:text-[#71e49b]">
+                <Link to="/reset-password" className="hover:text-[#0f5c46]">
                   Reset password
                 </Link>
               </div>
             </div>
 
-            <p className="mt-6 text-center text-xs font-bold leading-5 text-white/35">
-              Access is limited to profiles with the required admin role.
+            <p className="mt-6 text-center text-xs leading-5 text-white/45">
+              Access is limited to accounts with an admin role.
             </p>
           </section>
         </div>

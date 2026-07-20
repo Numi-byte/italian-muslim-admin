@@ -47,9 +47,10 @@ const requiredFields: (keyof FormState)[] = [
 ];
 
 const textInput =
-  "w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-400";
+  "w-full rounded-xl border border-[#e7e1d3] bg-[#faf8f1] px-3.5 py-2.5 text-sm text-[#1c2b26] outline-none transition placeholder:text-[#b0a483] focus:border-[#0f5c46] focus:ring-4 focus:ring-[#0f5c46]/12";
 
-const labelClass = "mb-1 block text-[11px] font-medium text-slate-300";
+const labelClass =
+  "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#9a8c68]";
 
 const BusinessSponsorshipPage: React.FC = () => {
   const [form, setForm] = useState<FormState>(initialForm);
@@ -110,7 +111,7 @@ const BusinessSponsorshipPage: React.FC = () => {
       }
 
       setForm(initialForm);
-      setMessage("Application sent. We will contact you shortly.");
+      setMessage("Application sent. We'll be in touch shortly.");
       setMessageType("success");
     } finally {
       setSubmitting(false);
@@ -118,56 +119,71 @@ const BusinessSponsorshipPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
-      <header className="border-b border-slate-800 bg-slate-950/90">
+    <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26]">
+      <header className="border-b border-[#e7e1d3] bg-[#f7f4ec]/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-sm font-bold text-slate-950">
-              UW
-            </div>
+            <img src="/icon.png" alt="" className="h-10 w-10 rounded-lg" />
             <div>
-              <div className="text-sm font-semibold text-white">UmmahWay</div>
-              <div className="text-[10px] text-slate-400">
-                Business sponsorship
+              <div className="font-display text-lg font-semibold text-[#0a3d30]">
+                UmmahWay
+              </div>
+              <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#9a8c68]">
+                Sponsorship
               </div>
             </div>
           </Link>
           <Link
             to="/"
-            className="rounded-full border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900"
+            className="rounded-lg border border-[#d8cfb8] bg-white px-3.5 py-2 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
           >
             Back home
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-5xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
+      <main className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="space-y-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-300">
-              Reach the community
-            </p>
-            <h1 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
-              Sponsor a helpful offer inside UmmahWay.
+            <div className="flex items-center gap-3">
+              <span className="h-px w-8 bg-[#d8cfb8]" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
+                Reach the community
+              </p>
+            </div>
+            <h1 className="mt-2 font-display text-4xl font-semibold leading-tight">
+              Sponsor a helpful offer
             </h1>
-            <p className="mt-4 text-sm leading-6 text-slate-300">
-              Tell us about your business, the audience you want to reach, and
-              the offer you would like to promote on the Prayers page.
+            <p className="mt-4 text-sm leading-7 text-[#4a5852]">
+              Tell us about your business, who you'd like to reach, and the offer
+              you'd like to share on the Prayers page.
             </p>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
-            Short mobile titles work best. We review every sponsor before an ad
-            is published so the app stays useful and respectful for worshippers.
+
+          <div className="rounded-2xl border border-[#e7e1d3] bg-white p-4 text-sm leading-6 text-[#4a5852] shadow-sm">
+            Short, clear titles work best on mobile. Every sponsor is reviewed
+            before an ad goes live, so the app stays useful and respectful for
+            worshippers.
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl bg-[#0a3d30] p-5 text-white">
+            <p className="font-arabic text-lg text-[#e6cf9a]">
+              وَتَعَاوَنُوا عَلَى الْبِرِّ وَالتَّقْوَىٰ
+            </p>
+            <p className="mt-2 text-sm leading-6 text-white/70">
+              Support the community and reach families, students and visitors
+              across the masjids you care about.
+            </p>
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+        <section className="rounded-2xl border border-[#e7e1d3] bg-white p-5 shadow-xl shadow-[#0a3d30]/10 sm:p-7">
           {message && (
             <div
-              className={`mb-4 rounded-lg border px-3 py-2 text-xs ${
+              className={`mb-4 rounded-xl border px-3 py-2 text-xs ${
                 messageType === "success"
-                  ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-200"
-                  : "border-red-500/70 bg-red-500/10 text-red-200"
+                  ? "border-[#0f5c46]/25 bg-[#0f5c46]/[0.06] text-[#0a3d30]"
+                  : "border-rose-200 bg-rose-50 text-rose-700"
               }`}
             >
               {message}
@@ -233,7 +249,7 @@ const BusinessSponsorshipPage: React.FC = () => {
                   className={textInput}
                   value={form.business_type}
                   onChange={(e) => setField("business_type", e.target.value)}
-                  placeholder="Restaurant, school, service..."
+                  placeholder="Restaurant, school, service…"
                 />
               </div>
               <div>
@@ -242,7 +258,7 @@ const BusinessSponsorshipPage: React.FC = () => {
                   className={textInput}
                   value={form.target_audience}
                   onChange={(e) => setField("target_audience", e.target.value)}
-                  placeholder="Families, students, commuters..."
+                  placeholder="Families, students, commuters…"
                 />
               </div>
               <div>
@@ -251,7 +267,7 @@ const BusinessSponsorshipPage: React.FC = () => {
                   className={textInput}
                   value={form.offer_type}
                   onChange={(e) => setField("offer_type", e.target.value)}
-                  placeholder="Discount, event, service launch..."
+                  placeholder="Discount, event, service launch…"
                 />
               </div>
               <div>
@@ -260,7 +276,7 @@ const BusinessSponsorshipPage: React.FC = () => {
                   className={textInput}
                   value={form.budget_range}
                   onChange={(e) => setField("budget_range", e.target.value)}
-                  placeholder="Example: 100-250 EUR"
+                  placeholder="Example: 100–250 EUR"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -271,7 +287,7 @@ const BusinessSponsorshipPage: React.FC = () => {
                   onChange={(e) =>
                     setField("preferred_duration", e.target.value)
                   }
-                  placeholder="Two weeks, one month, Ramadan..."
+                  placeholder="Two weeks, one month, Ramadan…"
                 />
               </div>
             </div>
@@ -286,9 +302,9 @@ const BusinessSponsorshipPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-emerald-950 hover:bg-emerald-400 disabled:opacity-60"
+              className="w-full rounded-xl bg-[#0f5c46] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0a3d30]/15 transition hover:bg-[#0a3d30] disabled:opacity-60"
             >
-              {submitting ? "Sending..." : "Submit sponsorship application"}
+              {submitting ? "Sending…" : "Submit sponsorship application"}
             </button>
           </form>
         </section>
