@@ -2,7 +2,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.85.0";
 
 const MAX_BODY_BYTES = 24 * 1024;
 const DEFAULT_SUPPORT_EMAIL = "support@ummahway.com";
-const DEFAULT_FROM_EMAIL = "UmmahWay <onboarding@resend.dev>";
 const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_TOPICS = new Set([
@@ -118,7 +117,10 @@ Deno.serve(async (request) => {
 
   const config = serverConfig();
   if (!config) {
-    return json(request, 500, { error: "Contact email is not configured." });
+    return json(request, 500, {
+      error:
+        "Contact email is not configured. Set RESEND_API_KEY and CONTACT_FROM_EMAIL in Supabase Edge Function secrets.",
+    });
   }
 
   const supabaseAdmin = createClient<Database>(
@@ -152,7 +154,7 @@ Deno.serve(async (request) => {
     return json(request, 400, { error: validation.error });
   }
 
-  const userResult = await getAuthenticatedUser(supabaseAdmin, request);
+  const userResult = await getAuthenticatedUser(supabaseAdmin, request, config);
   if ("error" in userResult) {
     return json(request, 401, { error: "Invalid account session." });
   }
@@ -210,10 +212,7 @@ Deno.serve(async (request) => {
         .eq("id", messageId);
     }
 
-    return json(request, 502, {
-      error:
-        "Your message was saved, but email delivery failed. Please try again later.",
-    });
+    return json(request, 502, { error: getEmailErrorMessage(error) });
   }
 
   return json(request, 200, { ok: true });
@@ -232,16 +231,16 @@ function serverConfig() {
     cleanEnvValue(Deno.env.get("RESEND_API_KEY"));
   const fromEmail =
     cleanEnvValue(Deno.env.get("CONTACT_FROM_EMAIL")) ??
-    cleanEnvValue(Deno.env.get("RESEND_FROM_EMAIL")) ??
-    DEFAULT_FROM_EMAIL;
+    cleanEnvValue(Deno.env.get("RESEND_FROM_EMAIL"));
   const toEmail =
     cleanEnvValue(Deno.env.get("CONTACT_TO_EMAIL")) ??
     cleanEnvValue(Deno.env.get("SUPPORT_TO_EMAIL")) ??
     DEFAULT_SUPPORT_EMAIL;
+  const anonKey = cleanEnvValue(Deno.env.get("SUPABASE_ANON_KEY"));
 
-  if (!supabaseUrl || !serviceRoleKey || !resendApiKey) return null;
+  if (!supabaseUrl || !serviceRoleKey || !resendApiKey || !fromEmail) return null;
 
-  return { supabaseUrl, serviceRoleKey, resendApiKey, fromEmail, toEmail };
+  return { supabaseUrl, serviceRoleKey, resendApiKey, fromEmail, toEmail, anonKey };
 }
 
 async function readJsonBody(request: Request) {
@@ -307,10 +306,13 @@ function sanitizeMessage(payload: unknown, toEmail: string) {
 async function getAuthenticatedUser(
   supabaseAdmin: AdminClient,
   request: Request,
+  config: NonNullable<ReturnType<typeof serverConfig>>,
 ) {
   const authorization = request.headers.get("authorization") ?? "";
   const token = authorization.replace(/^Bearer\s+/i, "").trim();
-  if (!token) return { user: null };
+  if (!token || token === config.anonKey || token === config.serviceRoleKey) {
+    return { user: null };
+  }
 
   const { data, error } = await supabaseAdmin.auth.getUser(token);
   if (error) {
@@ -319,6 +321,21 @@ async function getAuthenticatedUser(
   }
 
   return { user: data.user };
+}
+
+function getEmailErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes("domain") || lowerMessage.includes("verify")) {
+    return "Email provider rejected the sender. Verify ummahway.com in Resend and set CONTACT_FROM_EMAIL to UmmahWay <support@ummahway.com>.";
+  }
+
+  if (lowerMessage.includes("api key") || lowerMessage.includes("unauthorized")) {
+    return "Email provider rejected the API key. Check RESEND_API_KEY or CONTACT_RESEND_API_KEY in Supabase Edge Function secrets.";
+  }
+
+  return "Your message was saved, but email delivery failed. Check Supabase Edge Function logs and Resend sender setup.";
 }
 
 async function checkRateLimit(

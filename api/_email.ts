@@ -15,7 +15,6 @@ export class EmailConfigurationError extends Error {
 }
 
 const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
-const DEFAULT_FROM_EMAIL = "UmmahWay <onboarding@resend.dev>";
 
 export async function sendEmail(payload: EmailPayload) {
   const resendApiKey = cleanEnvValue(
@@ -26,6 +25,17 @@ export async function sendEmail(payload: EmailPayload) {
     throw new EmailConfigurationError();
   }
 
+  const fromEmail =
+    cleanEnvValue(payload.from) ??
+    cleanEnvValue(process.env.CONTACT_FROM_EMAIL) ??
+    cleanEnvValue(process.env.RESEND_FROM_EMAIL);
+
+  if (!fromEmail) {
+    throw new EmailConfigurationError(
+      "Email sender is not configured. Set CONTACT_FROM_EMAIL."
+    );
+  }
+
   const response = await fetch(RESEND_EMAIL_ENDPOINT, {
     method: "POST",
     headers: {
@@ -33,11 +43,7 @@ export async function sendEmail(payload: EmailPayload) {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      from:
-        cleanEnvValue(payload.from) ??
-        cleanEnvValue(process.env.CONTACT_FROM_EMAIL) ??
-        cleanEnvValue(process.env.RESEND_FROM_EMAIL) ??
-        DEFAULT_FROM_EMAIL,
+      from: fromEmail,
       to: Array.isArray(payload.to) ? payload.to : [payload.to],
       reply_to: payload.replyTo,
       subject: payload.subject,
