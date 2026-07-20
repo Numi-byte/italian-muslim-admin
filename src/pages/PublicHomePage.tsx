@@ -870,6 +870,9 @@ const PublicHomePage: React.FC = () => {
             <Link to="/sponsor" className="hover:text-[#006f66]">
               Sponsors
             </Link>
+            <Link to="/contact" className="hover:text-[#006f66]">
+              Contact
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -915,13 +918,13 @@ const PublicHomePage: React.FC = () => {
               </div>
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="mailto:info@ummahway.com"
+                <Link
+                  to="/contact?topic=masjid_timings"
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-[#71e49b] px-6 py-3 text-sm font-bold text-[#04100d] shadow-lg shadow-[#0b6b62]/20 hover:bg-[#8cf3ae] sm:bg-[#0b6b62] sm:text-white sm:hover:bg-[#095a53]"
                 >
                   Bring your masjid online
                   <Icon name="spark" className="h-4 w-4" />
-                </a>
+                </Link>
                 <a
                   href="#features"
                   className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold text-white/80 shadow-sm hover:bg-white/10 sm:border-[#c8d0c8] sm:bg-white/70 sm:text-[#1f3431] sm:hover:bg-white"
@@ -1060,12 +1063,12 @@ const PublicHomePage: React.FC = () => {
                 >
                   Open admin console
                 </Link>
-                <a
-                  href="mailto:info@ummahway.com"
+                <Link
+                  to="/contact?topic=masjid_timings"
                   className="inline-flex items-center justify-center rounded-full border border-[#b8c4bf] bg-white/70 px-6 py-3 text-sm font-bold text-[#1f3431] hover:bg-white"
                 >
                   Request onboarding
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -1223,6 +1226,9 @@ const PublicHomePage: React.FC = () => {
             </Link>
             <Link to="/terms" className="hover:text-[#0b6b62]">
               Terms
+            </Link>
+            <Link to="/contact" className="hover:text-[#0b6b62]">
+              Contact
             </Link>
             <Link to="/login" className="hover:text-[#0b6b62]">
               Admin

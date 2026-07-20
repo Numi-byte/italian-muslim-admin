@@ -59,6 +59,23 @@ function analyticsApiPlugin(mode: string): Plugin {
           }
         }
       );
+
+      server.middlewares.use("/api/contact", async (request, response) => {
+        const { default: contactHandler } = await import("./api/contact");
+
+        try {
+          await contactHandler(request, response);
+        } catch (error) {
+          console.error("[Vite] contact API failed", error);
+          response.statusCode = 500;
+          response.setHeader("Content-Type", "application/json");
+          response.end(
+            JSON.stringify({
+              error: "Local contact API failed. Check the dev server logs.",
+            })
+          );
+        }
+      });
     },
   };
 }

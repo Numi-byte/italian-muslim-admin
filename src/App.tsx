@@ -21,6 +21,8 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import MasjidsAdminPage from "./pages/MasjidsAdminPage";
 import BusinessSponsorshipPage from "./pages/BusinessSponsorshipPage";
 import SponsoredAdsPage from "./pages/SponsoredAdsPage";
+import AccountPage from "./pages/AccountPage";
+import ContactPage, { ContactSupportPanel } from "./pages/ContactPage";
 
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
@@ -43,7 +45,9 @@ type AdminTab =
   | "jumuah"
   | "announcements"
   | "analytics"
-  | "sponsoredAds";
+  | "sponsoredAds"
+  | "account"
+  | "contact";
 
 type AdminRouteProps = {
   children: React.ReactElement;
@@ -112,6 +116,20 @@ const ADMIN_TABS: Record<
     description:
       "Track installations, active usage, retention, frequency and page time.",
   },
+  account: {
+    label: "Account & purchases",
+    shortLabel: "Account",
+    section: "Account",
+    description:
+      "Check login access, subscription or lifetime purchase status and purchase history.",
+  },
+  contact: {
+    label: "Contact support",
+    shortLabel: "Support",
+    section: "Account",
+    description:
+      "Send account, purchase and masjid timing questions directly to UmmahWay support.",
+  },
 };
 
 const FULL_ADMIN_TABS: AdminTab[] = [
@@ -123,17 +141,19 @@ const FULL_ADMIN_TABS: AdminTab[] = [
   "requests",
   "sponsoredAds",
   "analytics",
+  "account",
+  "contact",
 ];
 
-const LIMITED_PRAYER_TABS: AdminTab[] = ["prayers"];
+const LIMITED_PRAYER_TABS: AdminTab[] = ["prayers", "account", "contact"];
+const SELF_SERVICE_TABS: AdminTab[] = ["account", "contact"];
 
 // -------------------------
 // Private route wrapper for /admin
 // -------------------------
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-  const { loading, session, isAdmin, isPrayerTimingEditor, signOut } =
-    useAuth();
+  const { loading, session } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -154,27 +174,6 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
         replace
         state={{ from: location.pathname }}
       />
-    );
-  }
-
-  if (!isAdmin && !isPrayerTimingEditor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50">
-        <div className="max-w-md text-center space-y-4 text-xs">
-          <h1 className="text-lg font-semibold">Access denied</h1>
-          <p className="text-slate-400">
-            Your account is not authorized to access the Ummah Way admin
-            console.
-          </p>
-          <button
-            type="button"
-            onClick={signOut}
-            className="rounded-md bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
     );
   }
 
@@ -216,13 +215,21 @@ const LoginRoute: React.FC = () => {
 const AdminLayout: React.FC = () => {
   const { signOut, user, isAdmin, isPrayerTimingEditor } = useAuth();
   const [tab, setTab] = useState<AdminTab>(() =>
-    isPrayerTimingEditor && !isAdmin ? "prayers" : "masjids"
+    isAdmin ? "masjids" : isPrayerTimingEditor ? "prayers" : "account"
   );
   const canUseFullAdmin = isAdmin;
-  const availableTabs = canUseFullAdmin ? FULL_ADMIN_TABS : LIMITED_PRAYER_TABS;
+  const availableTabs = canUseFullAdmin
+    ? FULL_ADMIN_TABS
+    : isPrayerTimingEditor
+      ? LIMITED_PRAYER_TABS
+      : SELF_SERVICE_TABS;
   const activeTab = availableTabs.includes(tab) ? tab : availableTabs[0];
   const activeMeta = ADMIN_TABS[activeTab];
-  const roleLabel = isAdmin ? "Super admin" : "Jamaah editor";
+  const roleLabel = isAdmin
+    ? "Super admin"
+    : isPrayerTimingEditor
+      ? "Jamaah editor"
+      : "Account holder";
   const sections = Array.from(
     new Set(availableTabs.map((item) => ADMIN_TABS[item].section))
   );
@@ -239,6 +246,12 @@ const AdminLayout: React.FC = () => {
     if (activeTab === "analytics" && canUseFullAdmin) return <AnalyticsPage />;
     if (activeTab === "sponsoredAds" && canUseFullAdmin) {
       return <SponsoredAdsPage />;
+    }
+    if (activeTab === "account") {
+      return <AccountPage onContactSupport={() => setTab("contact")} />;
+    }
+    if (activeTab === "contact") {
+      return <ContactSupportPanel embedded />;
     }
     return <PrayerTimesPage />;
   };
@@ -401,6 +414,7 @@ const App: React.FC = () => {
           <Route path="/" element={<PublicHomePage />} />
           <Route path="/masjids/:slug" element={<MasjidPublicPage />} />
           <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
+          <Route path="/contact" element={<ContactPage />} />
 
           {/* Legal pages */}
           <Route path="/privacy" element={<PrivacyPage />} />

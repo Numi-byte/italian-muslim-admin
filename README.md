@@ -15,6 +15,25 @@ Server-only variables must not use the `VITE_` prefix:
 Never configure `VITE_SUPABASE_SERVICE_ROLE_KEY` locally or in Vercel. Vite
 can expose `VITE_` variables to browser code.
 
+## Account & Contact Setup
+
+The admin console now includes self-service account pages for any signed-in
+user. Super admins still see all management tabs, Jamaah timing editors see
+their assigned timing tools, and regular users see account status plus contact
+support.
+
+Apply these SQL files in Supabase:
+
+- `../italian-muslim-app/supabase/2026-07-01-premium-access.sql` for premium
+  status and purchase event history.
+- `sql/2026-07-20-support-contact-messages.sql` for contact form storage and
+  rate limiting.
+
+The `/api/contact` endpoint validates submissions, rate-limits by IP and email,
+and stores messages addressed to `support@ummahway.com` in
+`public.support_messages`. Email forwarding can be added once an email provider
+transfer is approved and configured server-side.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
