@@ -1,12 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import CountrySelector from "../components/CountrySelector";
 import { supabase } from "../lib/supabaseClient";
+import {
+  DEFAULT_COUNTRY_CODE,
+  type CountryConfig,
+  inferMasjidCountryCode,
+} from "../lib/countryConfig";
+import { useCountryPreference } from "../lib/countryRouting";
 import {
   STORE_LINKS,
   TV_APP_URL,
   getMasjidPath,
   getMasjidTvUrl,
 } from "../lib/publicLinks";
+import { getCanonicalUrl, getCountryAlternates, setPageSeo } from "../lib/seo";
 
 type IconName =
   | "arrow"
@@ -146,6 +154,8 @@ type ActiveMasjid = {
   official_name: string;
   short_name: string | null;
   city: string;
+  country?: string | null;
+  country_code?: string | null;
   region: string | null;
   address_line1: string | null;
   address_line2: string | null;
@@ -478,13 +488,19 @@ type MasjidsDirectoryProps = {
   plottedMasjids: PlottedMasjid[];
   loading: boolean;
   error: string | null;
+  selectedCountry: CountryConfig;
 };
+
+const PUBLIC_MASJID_COLUMNS =
+  "id, slug, official_name, short_name, city, region, address_line1, address_line2, postal_code, latitude, longitude, timezone";
+const PUBLIC_MASJID_COLUMNS_WITH_COUNTRY = `${PUBLIC_MASJID_COLUMNS}, country, country_code`;
 
 const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
   error,
   loading,
   masjids,
   plottedMasjids,
+  selectedCountry,
 }) => {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -585,7 +601,7 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
               </p>
             </div>
             <h2 className="mt-2 max-w-3xl font-display text-4xl font-semibold leading-tight">
-              Find your local masjid
+              Find your local masjid in {selectedCountry.name}
             </h2>
           </div>
           <div className="rounded-2xl border border-[#e7e1d3] bg-[#faf8f1] px-5 py-3 text-center">
@@ -614,7 +630,8 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
 
             {!loading && !error && masjids.length === 0 && (
               <p className="rounded-2xl border border-[#e7e1d3] bg-[#faf8f1] p-4 text-sm text-[#6b7a74]">
-                No masjids are listed yet.
+                No masjids are listed for {selectedCountry.name} yet. Choose
+                another country or ask your masjid to join UmmahWay.
               </p>
             )}
 
@@ -708,7 +725,7 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9a8c68]">
-                      Trentino-Alto Adige / Südtirol
+                      {selectedCountry.name}
                     </p>
                     <p className="mt-1 font-display text-lg font-semibold text-[#1c2b26]">
                       {selectedMasjid
@@ -733,6 +750,8 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
 };
 
 const PublicHomePage: React.FC = () => {
+  const countryPreference = useCountryPreference();
+  const selectedCountry = countryPreference.country;
   const [isScrolled, setIsScrolled] = useState(false);
   const [masjids, setMasjids] = useState<ActiveMasjid[]>([]);
   const [loadingMasjids, setLoadingMasjids] = useState(true);
@@ -753,14 +772,25 @@ const PublicHomePage: React.FC = () => {
       setLoadingMasjids(true);
       setMasjidsError(null);
 
-      const { data, error } = await supabase
+      const countryResult = await supabase
         .from("public_masjids")
-        .select(
-          "id, slug, official_name, short_name, city, region, address_line1, address_line2, postal_code, latitude, longitude, timezone"
-        )
+        .select(PUBLIC_MASJID_COLUMNS_WITH_COUNTRY)
         .eq("is_active", true)
         .order("city", { ascending: true })
         .order("official_name", { ascending: true });
+      let data = countryResult.data as ActiveMasjid[] | null;
+      let error = countryResult.error;
+
+      if (error) {
+        const fallback = await supabase
+          .from("public_masjids")
+          .select(PUBLIC_MASJID_COLUMNS)
+          .eq("is_active", true)
+          .order("city", { ascending: true })
+          .order("official_name", { ascending: true });
+        data = fallback.data as ActiveMasjid[] | null;
+        error = fallback.error;
+      }
 
       if (cancelled) return;
 
@@ -781,9 +811,20 @@ const PublicHomePage: React.FC = () => {
     };
   }, []);
 
+  const countryMasjids = useMemo(
+    () =>
+      masjids.filter((masjid) => {
+        const masjidCountryCode = inferMasjidCountryCode(masjid);
+        return masjidCountryCode
+          ? masjidCountryCode === selectedCountry.code
+          : selectedCountry.code === DEFAULT_COUNTRY_CODE;
+      }),
+    [masjids, selectedCountry.code]
+  );
+
   const plottedMasjids = useMemo(
     () =>
-      masjids
+      countryMasjids
         .map((masjid) => {
           if (masjid.latitude != null && masjid.longitude != null) {
             return {
@@ -805,10 +846,54 @@ const PublicHomePage: React.FC = () => {
           };
         })
         .filter((masjid): masjid is PlottedMasjid => masjid !== null),
-    [masjids]
+    [countryMasjids]
   );
 
-  const featuredMasjids = masjids.slice(0, 3);
+  const featuredMasjids = countryMasjids.slice(0, 3);
+
+  useEffect(() => {
+    const path = window.location.pathname === "/" ? "/" : "/masjids";
+    const title = `Masjid Prayer Times in ${selectedCountry.name} | UmmahWay`;
+    const description = `Find masjids in ${selectedCountry.name}, daily prayer times, Jumu'ah schedules, announcements, directions, and UmmahWay TV display links.`;
+    const canonicalUrl = getCanonicalUrl(selectedCountry.code, path);
+
+    setPageSeo({
+      title,
+      description,
+      canonicalUrl,
+      alternates: getCountryAlternates(path),
+      imageUrl: `${window.location.origin}/icon.png`,
+      jsonLd: [
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "UmmahWay",
+          url: canonicalUrl,
+          logo: `${window.location.origin}/icon.png`,
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "UmmahWay",
+          url: canonicalUrl,
+          description,
+          inLanguage: selectedCountry.language,
+          areaServed: selectedCountry.countryIso,
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: `Masjids in ${selectedCountry.name}`,
+          itemListElement: countryMasjids.slice(0, 50).map((masjid, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: masjid.official_name,
+            url: `${window.location.origin}${getMasjidPath(masjid.slug)}`,
+          })),
+        },
+      ],
+    });
+  }, [countryMasjids, selectedCountry]);
 
   return (
     <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased">
@@ -830,8 +915,8 @@ const PublicHomePage: React.FC = () => {
               <span className="block font-display text-xl font-semibold leading-tight text-[#0a3d30]">
                 UmmahWay
               </span>
-              <span className="hidden text-[10px] font-medium uppercase tracking-[0.2em] text-[#9a8c68] sm:block">
-                Masjid prayer times
+              <span className="hidden text-[10px] font-medium uppercase text-[#9a8c68] sm:block">
+                {selectedCountry.name} masjid prayer times
               </span>
             </div>
           </Link>
@@ -858,6 +943,10 @@ const PublicHomePage: React.FC = () => {
           </nav>
 
           <div className="flex items-center gap-2">
+            <CountrySelector
+              selectedCode={selectedCountry.code}
+              className="hidden text-[#4a5852] lg:inline-flex"
+            />
             <Link
               to="/login"
               className="hidden rounded-lg px-3 py-2 text-sm font-medium text-[#4a5852] hover:bg-white sm:inline-flex"
@@ -890,12 +979,12 @@ const PublicHomePage: React.FC = () => {
               </p>
 
               <h1 className="mt-5 max-w-4xl font-display text-5xl font-semibold leading-[1.05] text-[#0a3d30] sm:text-6xl lg:text-7xl">
-                Prayer times from your local masjid.
+                Prayer times from masjids in {selectedCountry.name}.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-[#4a5852]">
-                Every masjid here has its own page with today's prayer times,
+                Every masjid listed for {selectedCountry.name} shows today's prayer times,
                 Jumu'ah, news and directions — kept up to date by the people who
-                run it.
+                from the people who run it.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -923,11 +1012,35 @@ const PublicHomePage: React.FC = () => {
                 </Link>
               </div>
 
+              {countryPreference.needsChoice && (
+                <div className="mt-6 max-w-2xl rounded-2xl border border-[#d8cfb8] bg-white/80 p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[#1c2b26]">
+                        Choose your country
+                      </p>
+                      <p className="mt-1 text-sm text-[#6b7a74]">
+                        This domain is not tied to one country yet, so select
+                        the country you want to browse.
+                      </p>
+                    </div>
+                    <CountrySelector
+                      selectedCode={selectedCountry.code}
+                      label="Show"
+                      className="text-[#4a5852]"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="mt-9 grid max-w-2xl grid-cols-3 gap-3 text-sm">
                 {[
-                  [loadingMasjids ? "…" : `${masjids.length}`, "masjids listed"],
                   [
-                    loadingMasjids ? "…" : `${plottedMasjids.length}`,
+                    loadingMasjids ? "..." : `${countryMasjids.length}`,
+                    "masjids listed",
+                  ],
+                  [
+                    loadingMasjids ? "..." : `${plottedMasjids.length}`,
                     "on the map",
                   ],
                   ["5", "daily prayers"],
@@ -971,8 +1084,9 @@ const PublicHomePage: React.FC = () => {
         <MasjidsDirectory
           error={masjidsError}
           loading={loadingMasjids}
-          masjids={masjids}
+          masjids={countryMasjids}
           plottedMasjids={plottedMasjids}
+          selectedCountry={selectedCountry}
         />
 
         <section id="pages" className="bg-[#f7f4ec] py-16 lg:py-20">

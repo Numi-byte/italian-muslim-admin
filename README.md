@@ -34,6 +34,57 @@ and stores messages addressed to `support@ummahway.com` in
 `public.support_messages`. Email forwarding can be added once an email provider
 transfer is approved and configured server-side.
 
+## Country Domains, SEO, And Password Reset Redirects
+
+The public website understands the domains currently owned for UmmahWay:
+
+- `ummahway.com` is the global entry point and country chooser.
+- `ummahway.eu` is also treated as a generic Europe entry point and country
+  chooser.
+- `ummahway.co.uk` serves United Kingdom masjids.
+- `ummahway.de` serves Germany masjids.
+- `ummahway.nl` serves Netherlands masjids.
+
+`ummahway.app` is not configured because the registrar screenshot shows it as a
+recommendation, not an owned domain.
+
+Country-specific domains can still be extended with `VITE_COUNTRY_DOMAINS`.
+Use semicolons between countries and commas between domains:
+
+```env
+VITE_COUNTRY_DOMAINS=uk=ummahway.co.uk,www.ummahway.co.uk;de=ummahway.de,www.ummahway.de;nl=ummahway.nl,www.ummahway.nl
+```
+
+The owned country domains above are already baked in, so this variable is only
+needed when adding more country domains later. The website also detects
+country-code top-level domains such as `.it`, `.de`, `.fr`, `.nl`, `.be`,
+`.es`, `.ca`, and `.co.uk`. Generic domains such as `.com` and `.eu` show a
+country selector so users can choose the country they want.
+
+For Supabase password reset links, add every production reset URL in Supabase:
+
+1. Open Supabase Dashboard.
+2. Go to Authentication > URL Configuration.
+3. Set Site URL to the main production domain.
+4. Add each country URL under Redirect URLs, for example:
+
+```text
+https://ummahway.com/reset-password
+https://www.ummahway.com/reset-password
+https://ummahway.eu/reset-password
+https://www.ummahway.eu/reset-password
+https://ummahway.co.uk/reset-password
+https://www.ummahway.co.uk/reset-password
+https://ummahway.de/reset-password
+https://www.ummahway.de/reset-password
+https://ummahway.nl/reset-password
+https://www.ummahway.nl/reset-password
+http://localhost:5173/reset-password
+```
+
+For production, prefer exact redirect URLs instead of broad wildcards. The reset
+password email template should link to `{{ .ConfirmationURL }}`.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

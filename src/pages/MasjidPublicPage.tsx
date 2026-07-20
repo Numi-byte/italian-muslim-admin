@@ -1,7 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import CountrySelector from "../components/CountrySelector";
+import {
+  getCountryByCode,
+  inferMasjidCountryCode,
+} from "../lib/countryConfig";
+import { useCountryPreference } from "../lib/countryRouting";
 import { supabase } from "../lib/supabaseClient";
-import { STORE_LINKS, getMasjidTvUrl } from "../lib/publicLinks";
+import { STORE_LINKS, getMasjidPath, getMasjidTvUrl } from "../lib/publicLinks";
+import { getCanonicalUrl, getCountryAlternates, setPageSeo } from "../lib/seo";
 
 type PrayerKey = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
 
@@ -11,6 +18,8 @@ type MasjidProfile = {
   official_name: string;
   short_name: string | null;
   city: string;
+  country?: string | null;
+  country_code?: string | null;
   region: string | null;
   address_line1: string | null;
   address_line2: string | null;
@@ -19,6 +28,10 @@ type MasjidProfile = {
   longitude: number | null;
   timezone: string;
 };
+
+const PUBLIC_MASJID_COLUMNS =
+  "id, slug, official_name, short_name, city, region, address_line1, address_line2, postal_code, latitude, longitude, timezone";
+const PUBLIC_MASJID_COLUMNS_WITH_COUNTRY = `${PUBLIC_MASJID_COLUMNS}, country, country_code`;
 
 type PrayerTimeRow = {
   prayer: PrayerKey;
@@ -396,6 +409,7 @@ function formatCountdown(totalSeconds: number) {
 
 const MasjidPublicPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const countryPreference = useCountryPreference();
 
   const [pageDate, setPageDate] = useState(() => getIsoDateForTimeZone());
   const [masjid, setMasjid] = useState<MasjidProfile | null>(null);
@@ -415,14 +429,25 @@ const MasjidPublicPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const { data: masjidData, error: masjidError } = await supabase
+      const countryResult = await supabase
         .from("public_masjids")
-        .select(
-          "id, slug, official_name, short_name, city, region, address_line1, address_line2, postal_code, latitude, longitude, timezone"
-        )
+        .select(PUBLIC_MASJID_COLUMNS_WITH_COUNTRY)
         .eq("slug", slug)
         .eq("is_active", true)
         .maybeSingle();
+      let masjidData = countryResult.data as MasjidProfile | null;
+      let masjidError = countryResult.error;
+
+      if (masjidError) {
+        const fallback = await supabase
+          .from("public_masjids")
+          .select(PUBLIC_MASJID_COLUMNS)
+          .eq("slug", slug)
+          .eq("is_active", true)
+          .maybeSingle();
+        masjidData = fallback.data as MasjidProfile | null;
+        masjidError = fallback.error;
+      }
 
       if (cancelled) return;
 
@@ -518,6 +543,9 @@ const MasjidPublicPage: React.FC = () => {
   }, [prayerTimes]);
 
   const timeZone = masjid?.timezone || "Europe/Rome";
+  const pageCountry =
+    getCountryByCode(masjid ? inferMasjidCountryCode(masjid) : null) ??
+    countryPreference.country;
 
   // Which jama'ah is next, plus a live second-by-second countdown to it.
   const schedule = useMemo(() => {
@@ -553,6 +581,76 @@ const MasjidPublicPage: React.FC = () => {
 
     return { rows, nextKey: nextRow?.key ?? null, nextRow, countdownSeconds };
   }, [orderedPrayerTimes, timeZone, nowTick]);
+
+  useEffect(() => {
+    if (!masjid) return;
+
+    const titleName = masjid.short_name || masjid.official_name;
+    const path = getMasjidPath(masjid.slug);
+    const canonicalUrl = getCanonicalUrl(pageCountry.code, path);
+    const description = `${masjid.official_name} in ${masjid.city}, ${pageCountry.name}: daily prayer times, Jumu'ah timetable, announcements, directions, and UmmahWay TV display.`;
+
+    setPageSeo({
+      title: `${titleName} Prayer Times & Jumu'ah | UmmahWay`,
+      description,
+      canonicalUrl,
+      alternates: getCountryAlternates(path),
+      imageUrl: `${window.location.origin}/icon.png`,
+      jsonLd: [
+        {
+          "@context": "https://schema.org",
+          "@type": "Mosque",
+          name: masjid.official_name,
+          alternateName: masjid.short_name ?? undefined,
+          url: canonicalUrl,
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: [masjid.address_line1, masjid.address_line2]
+              .filter(Boolean)
+              .join(", "),
+            addressLocality: masjid.city,
+            addressRegion: masjid.region ?? undefined,
+            postalCode: masjid.postal_code ?? undefined,
+            addressCountry: pageCountry.countryIso,
+          },
+          geo:
+            masjid.latitude != null && masjid.longitude != null
+              ? {
+                  "@type": "GeoCoordinates",
+                  latitude: masjid.latitude,
+                  longitude: masjid.longitude,
+                }
+              : undefined,
+          description,
+          areaServed: pageCountry.countryIso,
+        },
+        {
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "UmmahWay",
+              item: getCanonicalUrl(pageCountry.code, "/"),
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: `Masjids in ${pageCountry.name}`,
+              item: getCanonicalUrl(pageCountry.code, "/masjids"),
+            },
+            {
+              "@type": "ListItem",
+              position: 3,
+              name: titleName,
+              item: canonicalUrl,
+            },
+          ],
+        },
+      ],
+    });
+  }, [masjid, pageCountry]);
 
   if (loading) {
     return (
@@ -626,6 +724,11 @@ const MasjidPublicPage: React.FC = () => {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
+            <CountrySelector
+              selectedCode={pageCountry.code}
+              currentPath="/masjids"
+              className="hidden text-[#4a5852] lg:inline-flex"
+            />
             <a
               href={tvHref}
               target="_blank"
@@ -683,6 +786,9 @@ const MasjidPublicPage: React.FC = () => {
                 {address ||
                   `${masjid.city}${masjid.region ? `, ${masjid.region}` : ""}`}
               </span>
+            </p>
+            <p className="mt-3 text-sm font-semibold text-[#e6cf9a]">
+              {pageCountry.name}
             </p>
 
             <div className="mx-auto mt-6 flex max-w-xl flex-col items-center justify-center gap-1.5 text-sm text-white/75 sm:flex-row sm:gap-4">

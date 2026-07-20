@@ -36,6 +36,46 @@ type AccountPageProps = {
   onContactSupport?: () => void;
 };
 
+const APPLE_REFUND_URL = "https://support.apple.com/en-us/118223";
+const GOOGLE_PLAY_REFUND_URL =
+  "https://support.google.com/googleplay/answer/2479637?hl=en-EN";
+const FOUNDING_SUPPORTER_PRODUCT_ID = "ummahway_founding_supporter_lifetime";
+
+const FOUNDING_SUPPORTER_UNLOCKS = [
+  {
+    title: "Premium themes",
+    text: "Makkah, Madinah, Ramadan, Eid, Dark Minimal, Sunset, and any active premium theme collection shown in the app.",
+  },
+  {
+    title: "Salah Tracker Pro",
+    text: "Prayer streaks, insights, analytics, and extended tracking tools.",
+  },
+  {
+    title: "Unlimited Dua Journal",
+    text: "Removes the current free limit of three private dua entries.",
+  },
+  {
+    title: "Founding Supporter badge",
+    text: "A permanent supporter label on the account while the entitlement remains valid.",
+  },
+  {
+    title: "Founding Wall",
+    text: "Optional public wall entry with display name, optional message, and join date.",
+  },
+  {
+    title: "Selected future premium access",
+    text: "Includes planned premium launches such as Ramadan Tracker Pro when made available.",
+  },
+];
+
+const PURCHASE_CHECKS = [
+  "Use the native iOS or Android app. Web builds and Expo Go cannot complete this in-app purchase.",
+  "Sign in before buying or restoring so the store purchase can attach to the correct UmmahWay account.",
+  "Use the same Apple ID or Google account that completed checkout, then tap Restore Purchases in the app.",
+  "If the product does not load, the App Store Connect or Google Play Console product may still be pending, inactive, or unavailable in that region.",
+  "For support, send platform, product ID, purchase date, and order or transaction reference. Do not send full card numbers.",
+];
+
 const panelClass =
   "rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm shadow-slate-900/[0.03]";
 const labelClass =
@@ -136,9 +176,9 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
       ? "Jamaah timing editor"
       : "Account holder";
   const purchaseModel = premium?.lifetime_premium
-    ? "One-time lifetime"
+    ? "Founding Supporter lifetime"
     : premium
-      ? "Entitlement recorded"
+      ? "Store entitlement recorded"
       : "No purchase on this account";
 
   if (!user) {
@@ -160,7 +200,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
           <span className="font-medium text-slate-700">
             {user.email ?? "this account"}
           </span>{" "}
-          · {accessLabel}
+          - {accessLabel}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -169,7 +209,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
             onClick={() => void loadAccount()}
             disabled={loading}
           >
-            {loading ? "Refreshing…" : "Refresh"}
+            {loading ? "Refreshing..." : "Refresh"}
           </Button>
           {onContactSupport && (
             <Button size="sm" onClick={onContactSupport}>
@@ -224,7 +264,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
                   <div key={masjid.id} className="text-sm text-slate-700">
                     {masjid.official_name}
                     {masjid.city ? (
-                      <span className="text-slate-400"> · {masjid.city}</span>
+                      <span className="text-slate-400"> - {masjid.city}</span>
                     ) : null}
                   </div>
                 ))}
@@ -238,7 +278,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
           {loading ? (
             <div className="mt-4 flex items-center gap-2 text-sm text-slate-500">
               <Spinner />
-              Loading purchase status…
+              Loading purchase status...
             </div>
           ) : premium ? (
             <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
@@ -274,11 +314,127 @@ const AccountPage: React.FC<AccountPageProps> = ({ onContactSupport }) => {
             </dl>
           ) : (
             <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-4 text-sm text-slate-500">
-              No premium or one-time purchase is linked to this login yet.
+              No premium purchase or entitlement is linked to this login yet.
             </div>
           )}
         </section>
       </div>
+
+      <section className={panelClass}>
+        <div className={labelClass}>Purchase guidance</div>
+        <div className="mt-4 grid gap-4 text-sm text-slate-600 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4 leading-6">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={hasPremium && !isRevoked ? "emerald" : "slate"}>
+                  {hasPremium && !isRevoked
+                    ? "Entitlement active"
+                    : "Not active"}
+                </Badge>
+                <span className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                  Founding Supporter lifetime
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-emerald-950">
+                Product{" "}
+                <span className="break-all font-mono text-xs">
+                  {premium?.product_id ?? FOUNDING_SUPPORTER_PRODUCT_ID}
+                </span>{" "}
+                is the app&apos;s founding member purchase. It is a one-time,
+                non-consumable Apple App Store or Google Play in-app purchase,
+                not a recurring subscription.
+              </p>
+            </div>
+            <p>
+              A valid purchase is verified by the UmmahWay backend before
+              premium access is turned on. The mobile app sends Apple
+              transaction proof on iOS or a Google Play purchase token on
+              Android, and the backend records the platform, product ID,
+              transaction identifiers, purchase date, verification date, and
+              revocation status.
+            </p>
+            <p>
+              The account is treated as premium when{" "}
+              <span className="font-mono text-xs text-slate-800">
+                has_lifetime_premium
+              </span>{" "}
+              is true and no revoked date is present. Refunded, revoked, charged
+              back, or invalid purchases may remove premium access.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              What it unlocks
+            </div>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+              {FOUNDING_SUPPORTER_UNLOCKS.map((item) => (
+                <li key={item.title}>
+                  <span className="font-semibold text-slate-900">
+                    {item.title}:
+                  </span>{" "}
+                  {item.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 text-sm text-slate-600 lg:grid-cols-[1fr_0.9fr]">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Restore and troubleshooting
+            </div>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+              {PURCHASE_CHECKS.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Refunds and support
+            </div>
+            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+              <li>
+                Apple purchases: request refunds through{" "}
+                <a
+                  href={APPLE_REFUND_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-emerald-700 underline"
+                >
+                  Apple Support
+                </a>
+                .
+              </li>
+              <li>
+                Google Play purchases: review refund options through{" "}
+                <a
+                  href={GOOGLE_PLAY_REFUND_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-emerald-700 underline"
+                >
+                  Google Play Help
+                </a>
+                .
+              </li>
+              <li>
+                For missing entitlements, contact support with platform,
+                product ID, purchase date, and order or transaction reference.
+                Never send full card numbers.
+              </li>
+            </ul>
+            {onContactSupport && (
+              <Button size="sm" className="mt-4" onClick={onContactSupport}>
+                Contact support
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className={panelClass}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

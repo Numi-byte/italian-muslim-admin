@@ -76,6 +76,32 @@ function analyticsApiPlugin(mode: string): Plugin {
           );
         }
       });
+
+      server.middlewares.use("/sitemap.xml", async (request, response) => {
+        const { default: sitemapHandler } = await import("./api/sitemap");
+
+        try {
+          await sitemapHandler(request, response);
+        } catch (error) {
+          console.error("[Vite] sitemap API failed", error);
+          response.statusCode = 500;
+          response.setHeader("Content-Type", "text/plain");
+          response.end("Sitemap API failed. Check the dev server logs.");
+        }
+      });
+
+      server.middlewares.use("/robots.txt", async (request, response) => {
+        const { default: robotsHandler } = await import("./api/robots");
+
+        try {
+          robotsHandler(request, response);
+        } catch (error) {
+          console.error("[Vite] robots API failed", error);
+          response.statusCode = 500;
+          response.setHeader("Content-Type", "text/plain");
+          response.end("Robots API failed. Check the dev server logs.");
+        }
+      });
     },
   };
 }
