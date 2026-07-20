@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { setApiSecurityHeaders } from "./_security";
+import { setApiSecurityHeaders } from "./_security.js";
 
 export default function handler(
   request: IncomingMessage,

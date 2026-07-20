@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { setApiSecurityHeaders } from "./_security";
+import { setApiSecurityHeaders } from "./_security.js";
 
 type PublicMasjid = {
   slug: string;

@@ -6,13 +6,13 @@ import {
   requireTrustedOrigin,
   setApiSecurityHeaders,
   setNoStore,
-} from "./_security";
+} from "./_security.js";
 import {
   EmailConfigurationError,
   escapeHtml,
   getSupportRecipientEmail,
   sendEmail,
-} from "./_email";
+} from "./_email.js";
 
 const MAX_BODY_BYTES = 24 * 1024;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

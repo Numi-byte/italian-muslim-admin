@@ -6,7 +6,7 @@ import {
   requireTrustedOrigin,
   setApiSecurityHeaders,
   setNoStore,
-} from "./_security";
+} from "./_security.js";
 
 const MAX_BODY_BYTES = 32 * 1024;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

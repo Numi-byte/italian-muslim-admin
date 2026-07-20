@@ -5,7 +5,7 @@ import {
   requireTrustedOrigin,
   setApiSecurityHeaders,
   setNoStore,
-} from "./_security";
+} from "./_security.js";
 
 const SUPER_ADMIN_USER_ID = "e4d243f9-9b01-42d4-8dec-f1826bfe74ca";
 
