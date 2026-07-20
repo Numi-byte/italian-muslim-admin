@@ -5,7 +5,16 @@ type PublicMasjid = {
   slug: string;
 };
 
-const STATIC_PATHS = ["/", "/masjids", "/sponsor", "/contact", "/privacy", "/terms"];
+const STATIC_PATHS = [
+  "/",
+  "/masjids",
+  "/list-your-masjid",
+  "/tv",
+  "/sponsor",
+  "/contact",
+  "/privacy",
+  "/terms",
+];
 
 export default async function handler(
   request: IncomingMessage,

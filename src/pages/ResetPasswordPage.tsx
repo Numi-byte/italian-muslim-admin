@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 type View = "checking" | "request" | "set" | "success" | "error";
 type MessageTone = "info" | "error" | "success";
@@ -59,6 +60,15 @@ export default function ResetPasswordPage() {
 
   // Avoid StrictMode double-init in dev
   const didInitRef = useRef(false);
+
+  useEffect(() => {
+    setPageSeo({
+      title: "Reset Password | UmmahWay",
+      description: "Reset the password for your UmmahWay account.",
+      canonicalUrl: getGlobalCanonicalUrl("/reset-password"),
+      robots: "noindex,nofollow",
+    });
+  }, []);
 
   const urlInfo = useMemo(() => {
     const href = window.location.href;

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/authContext";
+import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 const SUPPORT_EMAIL = "support@ummahway.com";
 
@@ -292,6 +293,35 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
 };
 
 const ContactPage: React.FC = () => {
+  useEffect(() => {
+    const canonicalUrl = getGlobalCanonicalUrl("/contact");
+    setPageSeo({
+      title: "Contact UmmahWay | Support For Masjids And Worshippers",
+      description:
+        "Contact UmmahWay for account help, purchase questions, masjid listings, prayer timing updates, privacy requests, and technical support.",
+      canonicalUrl,
+      imageUrl: "https://ummahway.com/icon.png",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "ContactPage",
+        name: "Contact UmmahWay",
+        url: canonicalUrl,
+        description:
+          "Contact UmmahWay for account help, purchase questions, masjid listings, prayer timing updates, privacy requests, and technical support.",
+        isPartOf: {
+          "@type": "WebSite",
+          name: "UmmahWay",
+          url: "https://ummahway.com",
+        },
+        contactPoint: {
+          "@type": "ContactPoint",
+          email: SUPPORT_EMAIL,
+          contactType: "customer support",
+        },
+      },
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26]">
       <header className="border-b border-[#e7e1d3] bg-[#f7f4ec]/95 backdrop-blur">
@@ -325,9 +355,9 @@ const ContactPage: React.FC = () => {
                 Get in touch
               </p>
             </div>
-            <h2 className="mt-2 font-display text-4xl font-semibold leading-tight">
+            <h1 className="mt-2 font-display text-4xl font-semibold leading-tight">
               We're here to help
-            </h2>
+            </h1>
             <p className="mt-4 text-sm leading-7 text-[#4a5852]">
               Questions about a purchase, your account, or masjid timings? Send
               us a note and we'll get back to you.

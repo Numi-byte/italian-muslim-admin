@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 type FormState = {
   business_name: string;
@@ -59,6 +60,30 @@ const BusinessSponsorshipPage: React.FC = () => {
   const [messageType, setMessageType] = useState<"success" | "error" | null>(
     null
   );
+
+  useEffect(() => {
+    const canonicalUrl = getGlobalCanonicalUrl("/sponsor");
+    setPageSeo({
+      title: "Sponsor Community Offers | UmmahWay",
+      description:
+        "Apply to share reviewed sponsor offers with Muslim communities through UmmahWay.",
+      canonicalUrl,
+      imageUrl: "https://ummahway.com/icon.png",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: "Sponsor Community Offers",
+        url: canonicalUrl,
+        description:
+          "Apply to share reviewed sponsor offers with Muslim communities through UmmahWay.",
+        isPartOf: {
+          "@type": "WebSite",
+          name: "UmmahWay",
+          url: "https://ummahway.com",
+        },
+      },
+    });
+  }, []);
 
   const setField = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));

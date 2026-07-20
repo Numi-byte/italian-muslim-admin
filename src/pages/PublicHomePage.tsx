@@ -15,6 +15,7 @@ import {
   getMasjidTvUrl,
 } from "../lib/publicLinks";
 import { getCanonicalUrl, getCountryAlternates, setPageSeo } from "../lib/seo";
+import { PUBLIC_SITE_LINKS } from "../lib/siteStructure";
 
 type IconName =
   | "arrow"
@@ -880,6 +881,13 @@ const PublicHomePage: React.FC = () => {
           inLanguage: selectedCountry.language,
           areaServed: selectedCountry.countryIso,
         },
+        ...PUBLIC_SITE_LINKS.map((link) => ({
+          "@context": "https://schema.org",
+          "@type": "SiteNavigationElement",
+          name: link.name,
+          description: link.description,
+          url: `${window.location.origin}${link.path}`,
+        })),
         {
           "@context": "https://schema.org",
           "@type": "ItemList",
@@ -922,24 +930,11 @@ const PublicHomePage: React.FC = () => {
           </Link>
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#4a5852] md:flex">
-            <a href="#directory" className="hover:text-[#0f5c46]">
-              Masjids
-            </a>
-            <a href="#map" className="hover:text-[#0f5c46]">
-              Map
-            </a>
-            <a href="#pages" className="hover:text-[#0f5c46]">
-              Pages
-            </a>
-            <a href="#teams" className="hover:text-[#0f5c46]">
-              For Teams
-            </a>
-            <Link to="/sponsor" className="hover:text-[#0f5c46]">
-              Sponsors
-            </Link>
-            <Link to="/contact" className="hover:text-[#0f5c46]">
-              Contact
-            </Link>
+            {PUBLIC_SITE_LINKS.map((link) => (
+              <Link key={link.path} to={link.path} className="hover:text-[#0f5c46]">
+                {link.navLabel}
+              </Link>
+            ))}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -1285,17 +1280,11 @@ const PublicHomePage: React.FC = () => {
             </div>
           </div>
           <div className="flex flex-wrap gap-4 text-sm font-medium text-[#4a5852]">
-            <a href="#directory" className="hover:text-[#0f5c46]">
-              Masjids
-            </a>
-            <a
-              href={TV_APP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#0f5c46]"
-            >
-              Display
-            </a>
+            {PUBLIC_SITE_LINKS.map((link) => (
+              <Link key={link.path} to={link.path} className="hover:text-[#0f5c46]">
+                {link.navLabel}
+              </Link>
+            ))}
             <Link to="/privacy" className="hover:text-[#0f5c46]">
               Privacy
             </Link>
@@ -1316,9 +1305,9 @@ const PublicHomePage: React.FC = () => {
       <nav className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-[#0f5c46]/40 bg-[#0a3d30]/95 px-2 py-2 text-white shadow-2xl shadow-black/30 backdrop-blur md:hidden">
         <div className="grid grid-cols-4 text-center text-[11px] font-medium text-white/70">
           {[
-            { href: "#directory", label: "Masjids", icon: "home" as const },
-            { href: "#map", label: "Map", icon: "pin" as const },
-            { href: TV_APP_URL, label: "Display", icon: "screen" as const },
+            { href: "/masjids", label: "Masjids", icon: "home" as const },
+            { href: "/list-your-masjid", label: "List", icon: "pin" as const },
+            { href: "/tv", label: "TV", icon: "screen" as const },
             { href: "/login", label: "Admin", icon: "shield" as const },
           ].map((item) =>
             item.href.startsWith("/") ? (

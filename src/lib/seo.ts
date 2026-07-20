@@ -18,6 +18,7 @@ type SeoOptions = {
   alternates?: AlternateLink[];
   imageUrl?: string;
   jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
+  robots?: string;
 };
 
 export function setPageSeo(options: SeoOptions) {
@@ -31,6 +32,7 @@ export function setPageSeo(options: SeoOptions) {
   upsertMeta("property", "og:description", options.description);
   upsertMeta("property", "og:type", "website");
   upsertMeta("property", "og:url", options.canonicalUrl);
+  upsertMeta("name", "robots", options.robots ?? "index,follow");
   upsertMeta("name", "twitter:card", "summary_large_image");
   upsertMeta("name", "twitter:title", options.title);
   upsertMeta("name", "twitter:description", options.description);
@@ -76,6 +78,10 @@ export function getCanonicalUrl(countryCode: CountryCode, path: string) {
     url.searchParams.set("country", countryCode);
   }
   return url.toString();
+}
+
+export function getGlobalCanonicalUrl(path: string) {
+  return `https://${PRIMARY_GLOBAL_DOMAIN}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export function getCountryAlternates(path: string) {

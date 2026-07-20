@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/authContext";
+import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 // Rub el Hizb star lattice — a quiet backdrop on the deep-green panel.
 const StarLattice: React.FC<{ className?: string; id: string }> = ({
@@ -38,6 +39,15 @@ const LoginScreen: React.FC = () => {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPageSeo({
+      title: "Admin Login | UmmahWay",
+      description: "Sign in to manage UmmahWay masjid pages and prayer times.",
+      canonicalUrl: getGlobalCanonicalUrl("/login"),
+      robots: "noindex,nofollow",
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

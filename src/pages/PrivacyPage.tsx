@@ -1,6 +1,7 @@
 // src/pages/PrivacyPage.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 const LEGAL_EMAIL = "info@ummahway.com";
 const SUPPORT_EMAIL = "support@ummahway.com";
@@ -20,6 +21,30 @@ const Section: React.FC<SectionProps> = ({ title, children }) => (
 );
 
 const PrivacyPage: React.FC = () => {
+  useEffect(() => {
+    const canonicalUrl = getGlobalCanonicalUrl("/privacy");
+    setPageSeo({
+      title: "Privacy Policy | UmmahWay",
+      description:
+        "Read how UmmahWay collects, uses, stores, and protects data across the app, public masjid websites, TV display, support, sponsorship, and purchase features.",
+      canonicalUrl,
+      imageUrl: "https://ummahway.com/icon.png",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: "Privacy Policy",
+        url: canonicalUrl,
+        description:
+          "How UmmahWay collects, uses, stores, and protects data across the app, public masjid websites, TV display, support, sponsorship, and purchase features.",
+        isPartOf: {
+          "@type": "WebSite",
+          name: "UmmahWay",
+          url: "https://ummahway.com",
+        },
+      },
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f6f7f4] text-[#14201f]">
       <header className="sticky top-0 z-40 border-b border-[#dfe5df] bg-[#f6f7f4]/95 backdrop-blur">

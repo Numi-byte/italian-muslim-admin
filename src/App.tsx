@@ -39,6 +39,8 @@ import BusinessSponsorshipPage from "./pages/BusinessSponsorshipPage";
 import SponsoredAdsPage from "./pages/SponsoredAdsPage";
 import AccountPage from "./pages/AccountPage";
 import ContactPage, { ContactSupportPanel } from "./pages/ContactPage";
+import TvPage from "./pages/TvPage";
+import ListMasjidPage from "./pages/ListMasjidPage";
 
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
@@ -507,6 +509,8 @@ const App: React.FC = () => {
           <Route path="/" element={<PublicHomePage />} />
           <Route path="/masjids" element={<PublicHomePage />} />
           <Route path="/masjids/:slug" element={<MasjidPublicPage />} />
+          <Route path="/list-your-masjid" element={<ListMasjidPage />} />
+          <Route path="/tv" element={<TvPage />} />
           <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
           <Route path="/contact" element={<ContactPage />} />
 
