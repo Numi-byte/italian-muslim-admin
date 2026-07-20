@@ -1,9 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { setApiSecurityHeaders } from "./_security";
 
 export default function handler(
   request: IncomingMessage,
   response: ServerResponse
 ) {
+  setApiSecurityHeaders(response);
+
   if (request.method !== "GET") {
     response.statusCode = 405;
     response.end("Method not allowed");
@@ -13,6 +16,12 @@ export default function handler(
   const origin = getRequestOrigin(request);
   const body = `User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /reset-password
+Disallow: /confirm-email
+Disallow: /auth/confirm
+Disallow: /api/
 
 Sitemap: ${origin}/sitemap.xml
 `;

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/authContext";
+import { supabase } from "../lib/supabaseClient";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 const SUPPORT_EMAIL = "support@ummahway.com";
@@ -110,30 +111,21 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
 
     setSubmitting(true);
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
+      const { error, response } = await supabase.functions.invoke("support-contact", {
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
+        body: {
           ...trimmed,
           source: embedded ? "admin_console" : "public_contact",
           account_email: user?.email ?? null,
           page_url: window.location.href,
-        }),
+        },
       });
 
-      const result = (await response.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-
-      if (!response.ok) {
-        setNotice(result?.error ?? "Could not send your message.");
+      if (error) {
+        const detail = await response?.json().catch(() => null);
+        setNotice(detail?.error || error.message || "Could not send your message.");
         setNoticeType("error");
         return;
       }

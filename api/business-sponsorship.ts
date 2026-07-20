@@ -1,5 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {
+  firstHeaderValue,
+  handleCorsPreflight,
+  requireTrustedOrigin,
+  setApiSecurityHeaders,
+  setNoStore,
+} from "./_security";
 
 const MAX_BODY_BYTES = 32 * 1024;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -98,14 +105,17 @@ export default async function handler(
   request: IncomingMessage,
   response: ServerResponse
 ) {
+  setApiSecurityHeaders(response);
+
   if (request.method === "OPTIONS") {
-    response.writeHead(204, {
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+    handleCorsPreflight(request, response, {
+      methods: "POST, OPTIONS",
+      headers: "Content-Type",
     });
-    response.end();
     return;
   }
+
+  if (!requireTrustedOrigin(request, response)) return;
 
   if (request.method !== "POST") {
     sendJson(response, 405, { error: "Method not allowed." });
@@ -311,11 +321,6 @@ function getClientIp(request: IncomingMessage) {
   return forwardedIp || realIp || request.socket.remoteAddress || "unknown";
 }
 
-function firstHeaderValue(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
-
 function cleanEnvValue(value: string | undefined) {
   return value?.trim().replace(/^["']|["']$/g, "");
 }
@@ -325,8 +330,9 @@ function sendJson(
   statusCode: number,
   payload: Record<string, unknown>
 ) {
+  setApiSecurityHeaders(response);
   response.statusCode = statusCode;
-  response.setHeader("Content-Type", "application/json");
-  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Content-Type", "application/json; charset=utf-8");
+  setNoStore(response);
   response.end(JSON.stringify(payload));
 }

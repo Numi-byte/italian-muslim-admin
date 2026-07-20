@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { setApiSecurityHeaders } from "./_security";
 
 type PublicMasjid = {
   slug: string;
@@ -20,6 +21,8 @@ export default async function handler(
   request: IncomingMessage,
   response: ServerResponse
 ) {
+  setApiSecurityHeaders(response);
+
   if (request.method !== "GET") {
     response.statusCode = 405;
     response.end("Method not allowed");

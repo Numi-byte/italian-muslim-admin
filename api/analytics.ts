@@ -1,5 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {
+  handleCorsPreflight,
+  requireTrustedOrigin,
+  setApiSecurityHeaders,
+  setNoStore,
+} from "./_security";
 
 const SUPER_ADMIN_USER_ID = "e4d243f9-9b01-42d4-8dec-f1826bfe74ca";
 
@@ -38,14 +44,17 @@ export default async function handler(
   request: IncomingMessage,
   response: ServerResponse
 ) {
+  setApiSecurityHeaders(response);
+
   if (request.method === "OPTIONS") {
-    response.writeHead(204, {
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    handleCorsPreflight(request, response, {
+      methods: "GET, OPTIONS",
+      headers: "Authorization, Content-Type",
     });
-    response.end();
     return;
   }
+
+  if (!requireTrustedOrigin(request, response)) return;
 
   if (request.method !== "GET") {
     sendJson(response, 405, { error: "Method not allowed." });
@@ -187,8 +196,9 @@ function sendJson(
   statusCode: number,
   payload: Record<string, unknown>
 ) {
+  setApiSecurityHeaders(response);
   response.statusCode = statusCode;
-  response.setHeader("Content-Type", "application/json");
-  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Content-Type", "application/json; charset=utf-8");
+  setNoStore(response);
   response.end(JSON.stringify(payload));
 }

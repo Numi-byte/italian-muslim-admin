@@ -11,6 +11,9 @@ Server-only variables must not use the `VITE_` prefix:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
 - optional `SUPABASE_URL` if different from `VITE_SUPABASE_URL`
+- `RESEND_API_KEY` or `CONTACT_RESEND_API_KEY`
+- optional `CONTACT_FROM_EMAIL` or `RESEND_FROM_EMAIL`
+- optional `CONTACT_TO_EMAIL` or `SUPPORT_TO_EMAIL`
 
 Never configure `VITE_SUPABASE_SERVICE_ROLE_KEY` locally or in Vercel. Vite
 can expose `VITE_` variables to browser code.
@@ -29,10 +32,39 @@ Apply these SQL files in Supabase:
 - `sql/2026-07-20-support-contact-messages.sql` for contact form storage and
   rate limiting.
 
-The `/api/contact` endpoint validates submissions, rate-limits by IP and email,
-and stores messages addressed to `support@ummahway.com` in
-`public.support_messages`. Email forwarding can be added once an email provider
-transfer is approved and configured server-side.
+Contact submissions are handled primarily by the Supabase Edge Function at
+`supabase/functions/support-contact`. The public contact page and admin contact
+panel call this function directly through Supabase. The function validates
+submissions, rate-limits by IP and email, stores messages addressed to
+`support@ummahway.com` in `public.support_messages`, sends an internal support
+email, sends a user receipt email, and updates the stored row to `email_sent` or
+`email_failed`.
+
+Configure these Supabase Edge Function secrets:
+
+```env
+RESEND_API_KEY=re_...
+CONTACT_FROM_EMAIL=UmmahWay <support@ummahway.com>
+CONTACT_TO_EMAIL=support@ummahway.com
+```
+
+Deploy the function with:
+
+```bash
+supabase functions deploy support-contact
+```
+
+Set the secrets with either the Supabase Dashboard or:
+
+```bash
+supabase secrets set RESEND_API_KEY=re_... CONTACT_FROM_EMAIL="UmmahWay <support@ummahway.com>" CONTACT_TO_EMAIL=support@ummahway.com
+```
+
+`CONTACT_FROM_EMAIL` must be a sender that is verified in Resend. If Resend is
+not configured, the function returns an email configuration error instead of
+showing a false success. The Vercel `/api/contact` endpoint remains as a backup
+implementation, but the active frontend submission path is the Supabase Edge
+Function.
 
 ## Country Domains, SEO, And Password Reset Redirects
 
@@ -137,6 +169,24 @@ https://ummahway.nl/confirm-email
 https://www.ummahway.nl/confirm-email
 http://localhost:5173/confirm-email
 ```
+
+## Website Security Hardening
+
+Public masjid pages are intentionally crawlable so Google can index official
+masjid websites. They cannot be made fully unscrapeable because browsers and
+search engines must be able to read the content. The production deployment adds
+defense-in-depth instead:
+
+- Global security headers in `vercel.json`, including CSP, HSTS, frame blocking,
+  MIME sniffing protection, referrer limits, permissions lockdown, and COOP.
+- `noindex` and `no-store` headers for admin, login, reset password, and email
+  confirmation pages.
+- `robots.txt` blocks cooperative crawlers from admin, auth, and API routes.
+- Serverless API handlers reject untrusted browser origins and return no-store
+  JSON responses.
+- Contact and sponsorship APIs validate input, cap request body size, use a
+  honeypot field, and enforce Supabase-backed rate limits.
+- Externally loaded Leaflet map assets use Subresource Integrity.
 
 # React + TypeScript + Vite
 
