@@ -85,6 +85,59 @@ http://localhost:5173/reset-password
 For production, prefer exact redirect URLs instead of broad wildcards. The reset
 password email template should link to `{{ .ConfirmationURL }}`.
 
+## Supabase Signup Email Confirmation
+
+The web app includes a dedicated email confirmation page at:
+
+```text
+https://ummahway.com/confirm-email
+```
+
+It also supports the Supabase-style alias:
+
+```text
+https://ummahway.com/auth/confirm
+```
+
+For the best onboarding flow from the mobile app, use a custom Supabase
+confirmation email that sends the user to the confirmation page with the
+Supabase token hash:
+
+1. Open Supabase Dashboard.
+2. Go to Authentication > Email Templates.
+3. Open the Confirm signup template.
+4. Use this link for the main confirm button:
+
+```html
+<a href="{{ .SiteURL }}/confirm-email?token_hash={{ .TokenHash }}&type=email">
+  Confirm my email
+</a>
+```
+
+Keep Site URL set to:
+
+```text
+https://ummahway.com
+```
+
+If you use the default `{{ .ConfirmationURL }}` instead of the custom token
+hash link, add these confirmation URLs under Authentication > URL Configuration
+> Redirect URLs as well:
+
+```text
+https://ummahway.com/confirm-email
+https://www.ummahway.com/confirm-email
+https://ummahway.eu/confirm-email
+https://www.ummahway.eu/confirm-email
+https://ummahway.co.uk/confirm-email
+https://www.ummahway.co.uk/confirm-email
+https://ummahway.de/confirm-email
+https://www.ummahway.de/confirm-email
+https://ummahway.nl/confirm-email
+https://www.ummahway.nl/confirm-email
+http://localhost:5173/confirm-email
+```
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

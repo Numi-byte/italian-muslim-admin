@@ -48,6 +48,7 @@ const ContactSupportPanel = lazy(() =>
 );
 const TvPage = lazy(() => import("./pages/TvPage"));
 const ListMasjidPage = lazy(() => import("./pages/ListMasjidPage"));
+const ConfirmEmailPage = lazy(() => import("./pages/ConfirmEmailPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
 // ⬇️ Jumu'ah page back
@@ -531,6 +532,8 @@ const App: React.FC = () => {
             <Route path="/tv" element={<TvPage />} />
             <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/confirm-email" element={<ConfirmEmailPage />} />
+            <Route path="/auth/confirm" element={<ConfirmEmailPage />} />
 
             {/* Legal pages */}
             <Route path="/privacy" element={<PrivacyPage />} />
