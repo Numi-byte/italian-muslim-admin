@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useState } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -26,30 +26,36 @@ import {
   ChevronRightIcon,
 } from "./components/icons";
 
-import LoginScreen from "./components/LoginScreen";
-import RamadanPage from "./pages/RamadanPage";
-import IftarRequestsPage from "./pages/IftarRequestsPage";
-import PrayerTimesPage from "./pages/PrayerTimesPage";
-import AnnouncementsPage from "./pages/AnnouncementsPage";
-import PublicHomePage from "./pages/PublicHomePage";
-import MasjidPublicPage from "./pages/MasjidPublicPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import MasjidsAdminPage from "./pages/MasjidsAdminPage";
-import BusinessSponsorshipPage from "./pages/BusinessSponsorshipPage";
-import SponsoredAdsPage from "./pages/SponsoredAdsPage";
-import AccountPage from "./pages/AccountPage";
-import ContactPage, { ContactSupportPanel } from "./pages/ContactPage";
-import TvPage from "./pages/TvPage";
-import ListMasjidPage from "./pages/ListMasjidPage";
-
-import ResetPasswordPage from "./pages/ResetPasswordPage";
+const LoginScreen = lazy(() => import("./components/LoginScreen"));
+const RamadanPage = lazy(() => import("./pages/RamadanPage"));
+const IftarRequestsPage = lazy(() => import("./pages/IftarRequestsPage"));
+const PrayerTimesPage = lazy(() => import("./pages/PrayerTimesPage"));
+const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage"));
+const PublicHomePage = lazy(() => import("./pages/PublicHomePage"));
+const MasjidPublicPage = lazy(() => import("./pages/MasjidPublicPage"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const MasjidsAdminPage = lazy(() => import("./pages/MasjidsAdminPage"));
+const BusinessSponsorshipPage = lazy(
+  () => import("./pages/BusinessSponsorshipPage")
+);
+const SponsoredAdsPage = lazy(() => import("./pages/SponsoredAdsPage"));
+const AccountPage = lazy(() => import("./pages/AccountPage"));
+const ContactPage = lazy(() => import("./pages/ContactPage"));
+const ContactSupportPanel = lazy(() =>
+  import("./pages/ContactPage").then((module) => ({
+    default: module.ContactSupportPanel,
+  }))
+);
+const TvPage = lazy(() => import("./pages/TvPage"));
+const ListMasjidPage = lazy(() => import("./pages/ListMasjidPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
 // ⬇️ Jumu'ah page back
-import JumuahTimesPage from "./pages/JumuahTimesPage";
+const JumuahTimesPage = lazy(() => import("./pages/JumuahTimesPage"));
 
 // ⬇️ Legal pages
-import PrivacyPage from "./pages/PrivacyPage";
-import TermsPage from "./pages/TermsPage";
+const PrivacyPage = lazy(() => import("./pages/PrivacyPage"));
+const TermsPage = lazy(() => import("./pages/TermsPage"));
 
 // -------------------------
 // Types
@@ -180,6 +186,15 @@ const FULL_ADMIN_TABS: AdminTab[] = [
 
 const LIMITED_PRAYER_TABS: AdminTab[] = ["prayers", "account", "contact"];
 const SELF_SERVICE_TABS: AdminTab[] = ["account", "contact"];
+
+const PageLoading: React.FC<{ label?: string }> = ({ label = "Loading" }) => (
+  <div className="flex min-h-[50vh] items-center justify-center bg-slate-50 text-slate-600">
+    <div className="flex flex-col items-center gap-3 text-sm font-medium">
+      <div className="h-7 w-7 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+      <span>{label}...</span>
+    </div>
+  </div>
+);
 
 // -------------------------
 // Private route wrapper for /admin
@@ -490,7 +505,9 @@ const AdminLayout: React.FC = () => {
               {activeMeta.description}
             </p>
           </div>
-          {renderPage()}
+          <Suspense fallback={<PageLoading label={activeMeta.label} />}>
+            {renderPage()}
+          </Suspense>
         </section>
       </main>
     </div>
@@ -504,38 +521,40 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Public presentation site */}
-          <Route path="/" element={<PublicHomePage />} />
-          <Route path="/masjids" element={<PublicHomePage />} />
-          <Route path="/masjids/:slug" element={<MasjidPublicPage />} />
-          <Route path="/list-your-masjid" element={<ListMasjidPage />} />
-          <Route path="/tv" element={<TvPage />} />
-          <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
-          <Route path="/contact" element={<ContactPage />} />
+        <Suspense fallback={<PageLoading />}>
+          <Routes>
+            {/* Public presentation site */}
+            <Route path="/" element={<PublicHomePage />} />
+            <Route path="/masjids" element={<PublicHomePage />} />
+            <Route path="/masjids/:slug" element={<MasjidPublicPage />} />
+            <Route path="/list-your-masjid" element={<ListMasjidPage />} />
+            <Route path="/tv" element={<TvPage />} />
+            <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
+            <Route path="/contact" element={<ContactPage />} />
 
-          {/* Legal pages */}
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/terms" element={<TermsPage />} />
+            {/* Legal pages */}
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
 
-          {/* Login page */}
-          <Route path="/login" element={<LoginRoute />} />
+            {/* Login page */}
+            <Route path="/login" element={<LoginRoute />} />
 
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          {/* Private admin console */}
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <AdminLayout />
-              </AdminRoute>
-            }
-          />
+            {/* Private admin console */}
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }
+            />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   );
