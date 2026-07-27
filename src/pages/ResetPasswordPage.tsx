@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
+import { trackSiteEvent } from "../lib/vercelAnalytics";
 import { supabase } from "../lib/supabaseClient";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
@@ -166,12 +167,18 @@ export default function ResetPasswordPage() {
 
     const trimmed = email.trim();
     if (!trimmed) {
+      trackSiteEvent("Password Reset Request Failed", {
+        reason: "missing_email",
+      });
       setView("request");
       setMessageTone("error");
       setMessage("Please enter your email.");
       return;
     }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+      trackSiteEvent("Password Reset Request Failed", {
+        reason: "invalid_email",
+      });
       setView("request");
       setMessageTone("error");
       setMessage("Invalid email.");
@@ -190,6 +197,9 @@ export default function ResetPasswordPage() {
       });
 
       if (error) {
+        trackSiteEvent("Password Reset Request Failed", {
+          reason: "request_error",
+        });
         setView("request");
         setMessageTone("error");
         setMessage(error.message || "Could not send reset email.");
@@ -197,10 +207,14 @@ export default function ResetPasswordPage() {
       }
 
       // Security best practice: do not confirm whether an email exists.
+      trackSiteEvent("Password Reset Requested");
       setView("request");
       setMessageTone("success");
       setMessage("If this email exists, you will receive a reset link shortly. Check your inbox.");
     } catch (e: unknown) {
+      trackSiteEvent("Password Reset Request Failed", {
+        reason: "exception",
+      });
       setView("request");
       setMessageTone("error");
       setMessage(e instanceof Error ? e.message : "Could not send reset email.");
@@ -214,12 +228,18 @@ export default function ResetPasswordPage() {
     if (busy) return;
 
     if (password.length < MIN_PASSWORD_LEN) {
+      trackSiteEvent("Password Update Failed", {
+        reason: "password_too_short",
+      });
       setView("set");
       setMessageTone("error");
       setMessage(`Password must be at least ${MIN_PASSWORD_LEN} characters.`);
       return;
     }
     if (password !== password2) {
+      trackSiteEvent("Password Update Failed", {
+        reason: "password_mismatch",
+      });
       setView("set");
       setMessageTone("error");
       setMessage("Passwords do not match.");
@@ -234,12 +254,16 @@ export default function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
+        trackSiteEvent("Password Update Failed", {
+          reason: "request_error",
+        });
         setView("set");
         setMessageTone("error");
         setMessage(error.message || "Could not update password.");
         return;
       }
 
+      trackSiteEvent("Password Updated");
       setView("success");
       setMessageTone("success");
       setMessage("Password updated. Redirecting to login...");
@@ -249,6 +273,9 @@ export default function ResetPasswordPage() {
 
       setTimeout(() => navigate("/login"), 900);
     } catch (e: unknown) {
+      trackSiteEvent("Password Update Failed", {
+        reason: "exception",
+      });
       setView("set");
       setMessageTone("error");
       setMessage(e instanceof Error ? e.message : "Could not update password.");

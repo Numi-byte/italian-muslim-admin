@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { useAuth } from "../auth/authContext";
+import { trackSiteEvent } from "../lib/vercelAnalytics";
 import { supabase } from "../lib/supabaseClient";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
@@ -91,6 +92,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
       message: form.message.trim(),
       website: form.website.trim(),
     };
+    const analyticsSource = embedded ? "admin_console" : "public_contact";
 
     if (
       !trimmed.name ||
@@ -98,12 +100,22 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
       !trimmed.subject ||
       !trimmed.message
     ) {
+      trackSiteEvent("Contact Form Submit Failed", {
+        reason: "missing_required",
+        source: analyticsSource,
+        topic: trimmed.topic,
+      });
       setNotice("Please complete all required fields.");
       setNoticeType("error");
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed.email)) {
+      trackSiteEvent("Contact Form Submit Failed", {
+        reason: "invalid_email",
+        source: analyticsSource,
+        topic: trimmed.topic,
+      });
       setNotice("Please enter a valid email address.");
       setNoticeType("error");
       return;
@@ -117,19 +129,31 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
           : undefined,
         body: {
           ...trimmed,
-          source: embedded ? "admin_console" : "public_contact",
+          source: analyticsSource,
           account_email: user?.email ?? null,
           page_url: window.location.href,
         },
       });
 
       if (error) {
+        trackSiteEvent("Contact Form Submit Failed", {
+          authenticated: Boolean(session),
+          reason: "request_error",
+          source: analyticsSource,
+          status_code: response?.status,
+          topic: trimmed.topic,
+        });
         const detail = await response?.json().catch(() => null);
         setNotice(detail?.error || error.message || "Could not send your message.");
         setNoticeType("error");
         return;
       }
 
+      trackSiteEvent("Contact Form Submitted", {
+        authenticated: Boolean(session),
+        source: analyticsSource,
+        topic: trimmed.topic,
+      });
       setForm((prev) => ({
         ...emptyForm(prev.topic),
         name: prev.name,

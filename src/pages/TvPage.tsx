@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { TV_APP_URL } from "../lib/publicLinks";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 

@@ -6,9 +6,11 @@ import {
   Route,
   Navigate,
   useLocation,
-} from "react-router-dom";
+} from "react-router";
 import { AuthProvider } from "./auth/AuthProvider";
 import { useAuth } from "./auth/authContext";
+import { VercelAnalytics } from "./components/VercelAnalytics";
+import { trackSiteEvent } from "./lib/vercelAnalytics";
 import {
   MosqueIcon,
   MoonIcon,
@@ -286,8 +288,17 @@ const AdminLayout: React.FC = () => {
 
   // Close the mobile drawer whenever the active tab changes.
   useEffect(() => {
-    setMobileNavOpen(false);
+    const timeoutId = window.setTimeout(() => setMobileNavOpen(false), 0);
+    return () => window.clearTimeout(timeoutId);
   }, [activeTab]);
+
+  useEffect(() => {
+    trackSiteEvent("Admin Tab Viewed", {
+      tab: activeTab,
+      section: activeMeta.section,
+      role: roleLabel,
+    });
+  }, [activeTab, activeMeta.section, roleLabel]);
 
   // Prevent background scroll while the mobile drawer is open.
   useEffect(() => {
@@ -522,6 +533,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <VercelAnalytics />
         <Suspense fallback={<PageLoading />}>
           <Routes>
             {/* Public presentation site */}

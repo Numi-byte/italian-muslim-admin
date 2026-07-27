@@ -4,11 +4,7 @@
 // Purely presentational primitives — no business logic lives here.
 // -------------------------------------------------------------
 import React from "react";
-
-/** Tiny className combiner (keeps JSX tidy without a dependency). */
-export function cn(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(" ");
-}
+import { cn } from "../lib/classNames";
 
 // -------------------------------------------------------------
 // Surfaces

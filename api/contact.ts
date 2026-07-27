@@ -506,7 +506,18 @@ function sanitizeMessage(payload: unknown) {
 
 function requiredText(value: unknown, maxLength: number) {
   if (typeof value !== "string") return "";
-  return value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, maxLength);
+  return stripControlCharacters(value).trim().slice(0, maxLength);
+}
+
+function stripControlCharacters(value: string) {
+  let sanitized = "";
+
+  for (const character of value) {
+    const code = character.charCodeAt(0);
+    sanitized += code <= 31 || code === 127 ? " " : character;
+  }
+
+  return sanitized;
 }
 
 function optionalText(value: unknown, maxLength: number) {

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import CountrySelector from "../components/CountrySelector";
 import { supabase } from "../lib/supabaseClient";
 import {

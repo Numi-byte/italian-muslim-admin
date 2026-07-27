@@ -1,6 +1,6 @@
 // src/pages/TermsPage.tsx
 import React, { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 const LEGAL_EMAIL = "info@ummahway.com";

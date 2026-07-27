@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
+import { trackSiteEvent } from "../lib/vercelAnalytics";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 type FormState = {
@@ -96,6 +97,9 @@ const BusinessSponsorshipPage: React.FC = () => {
 
     const missing = requiredFields.find((field) => !form[field].trim());
     if (missing) {
+      trackSiteEvent("Business Sponsorship Submit Failed", {
+        reason: "missing_required",
+      });
       setMessage("Please complete all required fields before submitting.");
       setMessageType("error");
       return;
@@ -130,11 +134,18 @@ const BusinessSponsorshipPage: React.FC = () => {
       } | null;
 
       if (!response.ok) {
+        trackSiteEvent("Business Sponsorship Submit Failed", {
+          status_code: response.status,
+        });
         setMessage(result?.error ?? "Could not submit application.");
         setMessageType("error");
         return;
       }
 
+      trackSiteEvent("Business Sponsorship Submitted", {
+        has_notes: Boolean(payload.notes),
+        has_website: Boolean(payload.website_url),
+      });
       setForm(initialForm);
       setMessage("Application sent. We'll be in touch shortly.");
       setMessageType("success");

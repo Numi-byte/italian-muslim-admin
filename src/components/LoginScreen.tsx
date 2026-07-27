@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useAuth } from "../auth/authContext";
+import { trackSiteEvent } from "../lib/vercelAnalytics";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 
 // Rub el Hizb star lattice — a quiet backdrop on the deep-green panel.
@@ -54,13 +55,23 @@ const LoginScreen: React.FC = () => {
     setError(null);
 
     if (!email || !password) {
+      trackSiteEvent("Admin Login Failed", {
+        reason: "missing_credentials",
+      });
       setError("Please enter email and password.");
       return;
     }
 
     setBusy(true);
     const { error } = await signIn(email.trim(), password);
-    if (error) setError(error);
+    if (error) {
+      trackSiteEvent("Admin Login Failed", {
+        reason: "auth_error",
+      });
+      setError(error);
+    } else {
+      trackSiteEvent("Admin Login Succeeded");
+    }
     setBusy(false);
   };
 

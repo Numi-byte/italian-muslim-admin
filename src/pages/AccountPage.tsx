@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../auth/authContext";
-import { Alert, Badge, Button, Spinner, cn } from "../components/ui";
+import { Alert, Badge, Button, Spinner } from "../components/ui";
+import { cn } from "../lib/classNames";
 
 type PremiumStatus = {
   user_id: string;

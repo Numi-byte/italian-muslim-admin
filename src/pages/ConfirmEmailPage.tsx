@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
+import { trackSiteEvent } from "../lib/vercelAnalytics";
 import { STORE_LINKS } from "../lib/publicLinks";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 import { supabase } from "../lib/supabaseClient";
@@ -66,6 +67,9 @@ const ConfirmEmailPage: React.FC = () => {
 
     const confirmEmail = async () => {
       if (authParams.error || authParams.errorDescription) {
+        trackSiteEvent("Email Confirmation Failed", {
+          method: "redirect_error",
+        });
         setState("error");
         setMessage(
           decodeURIComponent(
@@ -79,6 +83,9 @@ const ConfirmEmailPage: React.FC = () => {
 
       try {
         if (authParams.tokenHash) {
+          trackSiteEvent("Email Confirmation Ready", {
+            method: "token_hash",
+          });
           setState("ready");
           setMessage("Your secure confirmation link is ready. Tap confirm to finish.");
           return;
@@ -88,12 +95,19 @@ const ConfirmEmailPage: React.FC = () => {
           const { error } = await supabase.auth.exchangeCodeForSession(authParams.code);
 
           if (error) {
+            trackSiteEvent("Email Confirmation Failed", {
+              method: "code",
+              reason: "exchange_error",
+            });
             setState("error");
             setMessage(error.message || "This confirmation link is invalid or expired.");
             return;
           }
 
           cleanConfirmUrl();
+          trackSiteEvent("Email Confirmed", {
+            method: "code",
+          });
           setState("success");
           setMessage("Your email has been confirmed. You can now return to UmmahWay.");
           return;
@@ -103,20 +117,33 @@ const ConfirmEmailPage: React.FC = () => {
           const { data, error } = await supabase.auth.getSession();
 
           if (error || !data.session) {
+            trackSiteEvent("Email Confirmation Failed", {
+              method: "session_hash",
+              reason: error ? "session_error" : "missing_session",
+            });
             setState("error");
             setMessage(error?.message || "Could not read the confirmation session.");
             return;
           }
 
           cleanConfirmUrl();
+          trackSiteEvent("Email Confirmed", {
+            method: "session_hash",
+          });
           setState("success");
           setMessage("Your email has been confirmed. You can now return to UmmahWay.");
           return;
         }
 
+        trackSiteEvent("Email Confirmation Ready", {
+          method: "manual",
+        });
         setState("ready");
         setMessage("Open this page from the confirmation link in your email.");
       } catch (error) {
+        trackSiteEvent("Email Confirmation Failed", {
+          reason: "exception",
+        });
         setState("error");
         setMessage(error instanceof Error ? error.message : "Something went wrong.");
       }
@@ -143,12 +170,19 @@ const ConfirmEmailPage: React.FC = () => {
     setConfirming(false);
 
     if (error) {
+      trackSiteEvent("Email Confirmation Failed", {
+        method: "verify_otp",
+        reason: "request_error",
+      });
       setState("error");
       setMessage(error.message || "This confirmation link is invalid or expired.");
       return;
     }
 
     cleanConfirmUrl();
+    trackSiteEvent("Email Confirmed", {
+      method: "verify_otp",
+    });
     setState("success");
     setMessage("Your email has been confirmed. You can now return to UmmahWay.");
   };
