@@ -21,6 +21,7 @@ import {
   TagIcon,
   ChartIcon,
   UserIcon,
+  BriefcaseIcon,
   LifeBuoyIcon,
   MenuIcon,
   CloseIcon,
@@ -41,6 +42,8 @@ const BusinessSponsorshipPage = lazy(
   () => import("./pages/BusinessSponsorshipPage")
 );
 const SponsoredAdsPage = lazy(() => import("./pages/SponsoredAdsPage"));
+const CareersPage = lazy(() => import("./pages/CareersPage"));
+const CareersAdminPage = lazy(() => import("./pages/CareersAdminPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const ContactSupportPanel = lazy(() =>
@@ -73,6 +76,7 @@ type AdminTab =
   | "announcements"
   | "analytics"
   | "sponsoredAds"
+  | "careers"
   | "account"
   | "contact";
 
@@ -156,6 +160,14 @@ const ADMIN_TABS: Record<AdminTab, TabMeta> = {
     description:
       "Track installations, active usage, retention, frequency and page time.",
   },
+  careers: {
+    label: "Careers",
+    shortLabel: "Careers",
+    section: "People",
+    icon: BriefcaseIcon,
+    description:
+      "Create open roles, review submitted CVs and manage candidate selection.",
+  },
   account: {
     label: "Account & purchases",
     shortLabel: "Account",
@@ -183,6 +195,7 @@ const FULL_ADMIN_TABS: AdminTab[] = [
   "requests",
   "sponsoredAds",
   "analytics",
+  "careers",
   "account",
   "contact",
 ];
@@ -414,6 +427,7 @@ const AdminLayout: React.FC = () => {
     if (activeTab === "sponsoredAds" && canUseFullAdmin) {
       return <SponsoredAdsPage />;
     }
+    if (activeTab === "careers" && canUseFullAdmin) return <CareersAdminPage />;
     if (activeTab === "account") {
       return <AccountPage onContactSupport={() => setTab("contact")} />;
     }
@@ -543,6 +557,7 @@ const App: React.FC = () => {
             <Route path="/list-your-masjid" element={<ListMasjidPage />} />
             <Route path="/tv" element={<TvPage />} />
             <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
+            <Route path="/careers" element={<CareersPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/confirm-email" element={<ConfirmEmailPage />} />
             <Route path="/auth/confirm" element={<ConfirmEmailPage />} />

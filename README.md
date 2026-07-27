@@ -31,6 +31,8 @@ Apply these SQL files in Supabase:
   status and purchase event history.
 - `sql/2026-07-20-support-contact-messages.sql` for contact form storage and
   rate limiting.
+- `sql/2026-07-27-careers.sql` for public career roles, private CV storage,
+  career applications, and super-admin RLS policies.
 
 Contact submissions are handled primarily by the Supabase Edge Function at
 `supabase/functions/support-contact`. The public contact page and admin contact
@@ -65,6 +67,36 @@ not configured, the function returns an email configuration error instead of
 showing a false success. The Vercel `/api/contact` endpoint remains as a backup
 implementation, but the active frontend submission path is the Supabase Edge
 Function.
+
+## Careers Setup
+
+The public careers page is available at:
+
+```text
+https://ummahway.com/careers
+```
+
+Super admins manage roles and applications from the private admin console under
+Careers. Candidates submit their CV through `/api/careers`; CV files are stored
+in the private Supabase Storage bucket `career-cvs`, and the applicant receives
+an automated confirmation email from the UmmahWay support sender. The support
+inbox also receives an internal notification for each application.
+
+Rejections are handled by `/api/careers-admin`: the super admin clicks
+`Reject and email`, the application is marked rejected, and the candidate
+receives a professional rejection email automatically.
+
+Configure the same server-only email settings used by contact support:
+
+```env
+RESEND_API_KEY=re_...
+CONTACT_FROM_EMAIL=UmmahWay <support@ummahway.com>
+CONTACT_TO_EMAIL=support@ummahway.com
+```
+
+Optionally set `CAREERS_FROM_EMAIL` if Resend has a separate verified sender
+for careers. Otherwise careers uses `CONTACT_FROM_EMAIL` and falls back to
+`UmmahWay <support@ummahway.com>`.
 
 ## Country Domains, SEO, And Password Reset Redirects
 

@@ -30,6 +30,13 @@ export const PUBLIC_SITE_LINKS = [
       "Apply to share reviewed sponsor offers with Muslim communities through UmmahWay.",
   },
   {
+    name: "Careers at UmmahWay",
+    navLabel: "Careers",
+    path: "/careers",
+    description:
+      "Explore open roles at UmmahWay and submit a CV for active opportunities.",
+  },
+  {
     name: "Contact UmmahWay",
     navLabel: "Contact",
     path: "/contact",

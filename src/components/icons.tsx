@@ -79,6 +79,21 @@ export const UserIcon: React.FC<IconProps> = (p) => (
   </svg>
 );
 
+export const BriefcaseIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <path d="M9 7V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1" />
+    <rect x="4" y="7" width="16" height="13" rx="2" />
+    <path d="M4 12h16M10 12v2h4v-2" />
+  </svg>
+);
+
+export const FileTextIcon: React.FC<IconProps> = (p) => (
+  <svg {...base(p)}>
+    <path d="M7 3h6l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
+    <path d="M13 3v5h5M9 13h6M9 17h6M9 9h2" />
+  </svg>
+);
+
 export const LifeBuoyIcon: React.FC<IconProps> = (p) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="8" />

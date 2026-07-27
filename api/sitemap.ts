@@ -12,6 +12,7 @@ const STATIC_PATHS = [
   "/list-your-masjid",
   "/tv",
   "/sponsor",
+  "/careers",
   "/contact",
   "/privacy",
   "/terms",
