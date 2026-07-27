@@ -26,7 +26,7 @@ const PrivacyPage: React.FC = () => {
     setPageSeo({
       title: "Privacy Policy | UmmahWay",
       description:
-        "Read how UmmahWay collects, uses, stores, and protects data across the app, public masjid websites, TV display, support, sponsorship, and purchase features.",
+        "Read how UmmahWay collects, uses, stores, and protects data across the app, public masjid websites, TV display, support, sponsorship, careers, and purchase features.",
       canonicalUrl,
       imageUrl: "https://ummahway.com/icon.png",
       jsonLd: {
@@ -35,7 +35,7 @@ const PrivacyPage: React.FC = () => {
         name: "Privacy Policy",
         url: canonicalUrl,
         description:
-          "How UmmahWay collects, uses, stores, and protects data across the app, public masjid websites, TV display, support, sponsorship, and purchase features.",
+          "How UmmahWay collects, uses, stores, and protects data across the app, public masjid websites, TV display, support, sponsorship, careers, and purchase features.",
         isPartOf: {
           "@type": "WebSite",
           name: "UmmahWay",
@@ -76,15 +76,15 @@ const PrivacyPage: React.FC = () => {
             Privacy Policy
           </h1>
           <p className="mt-3 text-sm font-semibold text-[#697875]">
-            Last updated: 20 July 2026
+            Last updated: 27 July 2026
           </p>
 
           <div className="mt-6 rounded-lg border border-[#cfd8d2] bg-[#edf3ef] p-5 text-base leading-7 text-[#425351]">
             This Privacy Policy explains how UmmahWay collects, uses, stores,
             and protects data when you use the UmmahWay mobile app, public
             website, multi-masjid directory, official masjid pages, TV display,
-            admin console, support forms, sponsorship forms, and purchase
-            features.
+            admin console, support forms, sponsorship forms, careers forms,
+            and purchase features.
           </div>
 
           <div className="mt-8 space-y-5">
@@ -175,6 +175,17 @@ const PrivacyPage: React.FC = () => {
                 </li>
                 <li>
                   <span className="font-black text-[#14201f]">
+                    Careers and recruitment data:
+                  </span>{" "}
+                  role applied for, name, email address, phone number,
+                  location, CV file, LinkedIn or portfolio links, current
+                  company, experience, availability, work authorisation, salary
+                  expectation, cover message, consent records, application
+                  status, admin review notes, rejection status, and recruitment
+                  email delivery records.
+                </li>
+                <li>
+                  <span className="font-black text-[#14201f]">
                     Device, analytics, and log data:
                   </span>{" "}
                   browser, device type, operating system, app version, pages or
@@ -213,6 +224,12 @@ const PrivacyPage: React.FC = () => {
                   and account requests.
                 </li>
                 <li>
+                  To receive and review career applications, assess candidates,
+                  manage open roles, send application confirmations, contact
+                  shortlisted candidates, and send selection or rejection
+                  updates.
+                </li>
+                <li>
                   To protect accounts, prevent misuse, rate-limit forms, debug
                   errors, and secure the platform.
                 </li>
@@ -231,15 +248,17 @@ const PrivacyPage: React.FC = () => {
               <ul className="list-disc space-y-2 pl-5">
                 <li>
                   <span className="font-black text-[#14201f]">Contract:</span>{" "}
-                  to provide accounts, purchases, app access, and requested
-                  services.
+                  to provide accounts, purchases, app access, requested
+                  services, and steps requested before a possible recruitment
+                  or work relationship.
                 </li>
                 <li>
                   <span className="font-black text-[#14201f]">
                     Legitimate interests:
                   </span>{" "}
                   to operate secure public masjid websites, prevent abuse,
-                  maintain platform reliability, and improve the service.
+                  maintain platform reliability, review recruitment
+                  applications, manage hiring records, and improve the service.
                 </li>
                 <li>
                   <span className="font-black text-[#14201f]">Consent:</span>{" "}
@@ -353,6 +372,12 @@ const PrivacyPage: React.FC = () => {
                 UmmahWay is reorganised, transferred, or continued under another
                 operator.
               </p>
+              <p>
+                Careers data and CV files are not made public. They are
+                available only to authorised UmmahWay recruitment or super-admin
+                users and the service providers needed for private storage,
+                email delivery, security, hosting, and application management.
+              </p>
             </Section>
 
             <Section title="9. Data Retention">
@@ -366,6 +391,13 @@ const PrivacyPage: React.FC = () => {
                 resolve the request and maintain service records.
               </p>
               <p>
+                Career applications and CV files are retained only as long as
+                reasonably needed for recruitment selection, candidate
+                communication, audit, legal, or dispute purposes. We may delete,
+                anonymise, or archive applications when they are no longer
+                needed.
+              </p>
+              <p>
                 Public masjid content may remain visible until removed by an
                 authorised admin or by UmmahWay.
               </p>
@@ -376,7 +408,8 @@ const PrivacyPage: React.FC = () => {
                 We use technical and organisational measures designed to protect
                 data, including authenticated admin access, role-based
                 permissions, encrypted connections, hosted infrastructure
-                controls, audit-oriented purchase records, and form
+                controls, private CV storage, short-lived signed CV access for
+                authorised admins, audit-oriented purchase records, and form
                 rate-limiting. No online service can be guaranteed completely
                 secure.
               </p>
@@ -433,8 +466,8 @@ const PrivacyPage: React.FC = () => {
               <p>
                 We may update this Privacy Policy as UmmahWay grows, including
                 when new website, TV display, admin, purchase, analytics, or
-                support features are added. The updated date above shows the
-                latest version.
+                support features are added, including recruitment and careers
+                workflows. The updated date above shows the latest version.
               </p>
             </Section>
 

@@ -26,7 +26,7 @@ const TermsPage: React.FC = () => {
     setPageSeo({
       title: "Terms & Conditions | UmmahWay",
       description:
-        "Read the terms that govern use of the UmmahWay app, public masjid websites, TV display, admin tools, support, sponsorship, and purchase features.",
+        "Read the terms that govern use of the UmmahWay app, public masjid websites, TV display, admin tools, support, sponsorship, careers, and purchase features.",
       canonicalUrl,
       imageUrl: "https://ummahway.com/icon.png",
       jsonLd: {
@@ -35,7 +35,7 @@ const TermsPage: React.FC = () => {
         name: "Terms & Conditions",
         url: canonicalUrl,
         description:
-          "Terms that govern use of the UmmahWay app, public masjid websites, TV display, admin tools, support, sponsorship, and purchase features.",
+          "Terms that govern use of the UmmahWay app, public masjid websites, TV display, admin tools, support, sponsorship, careers, and purchase features.",
         isPartOf: {
           "@type": "WebSite",
           name: "UmmahWay",
@@ -76,14 +76,14 @@ const TermsPage: React.FC = () => {
             Terms &amp; Conditions
           </h1>
           <p className="mt-3 text-sm font-semibold text-[#697875]">
-            Last updated: 20 July 2026
+            Last updated: 27 July 2026
           </p>
 
           <div className="mt-6 rounded-lg border border-[#cfd8d2] bg-[#edf3ef] p-5 text-base leading-7 text-[#425351]">
             These Terms govern your use of the UmmahWay mobile app, public
             website, multi-masjid directory, official masjid pages, TV display,
-            admin console, support forms, sponsorship forms, and purchase
-            features. By using UmmahWay, you agree to these Terms.
+            admin console, support forms, sponsorship forms, careers forms,
+            and purchase features. By using UmmahWay, you agree to these Terms.
           </div>
 
           <div className="mt-8 space-y-5">
@@ -95,7 +95,8 @@ const TermsPage: React.FC = () => {
                 schedules, announcements, Ramadan information, iftar workflows,
                 TV display access, mobile app features, app download links,
                 sponsorship forms, support tools, account pages, purchase
-                history, and admin tools.
+                history, careers pages, recruitment application tools, and
+                admin tools.
               </p>
             </Section>
 
@@ -340,7 +341,38 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="10. Intellectual Property">
+            <Section title="10. Careers And Job Applications">
+              <p>
+                UmmahWay may publish open roles on the careers page. If you
+                submit a job application, you confirm that the information,
+                CV, links, work authorisation details, availability, and other
+                materials you provide are accurate, lawful, and yours to share.
+              </p>
+              <p>
+                Submitting an application does not guarantee interview,
+                selection, employment, contract work, volunteering, payment,
+                immigration sponsorship, or any future relationship with
+                UmmahWay. We may review, shortlist, reject, archive, or close
+                applications and roles at our discretion, subject to applicable
+                law.
+              </p>
+              <p>
+                The super admin can manage open roles and applications in the
+                private admin area, including closing roles and rejecting
+                applicants. If an application is rejected, UmmahWay may send a
+                professional automated email update to the applicant using the
+                submitted email address.
+              </p>
+              <p>
+                Do not upload CVs or application materials containing
+                sensitive personal data unless it is genuinely necessary for
+                your application. You must not submit malware, misleading
+                documents, confidential third-party information, or content you
+                do not have permission to provide.
+              </p>
+            </Section>
+
+            <Section title="11. Intellectual Property">
               <p>
                 The UmmahWay name, brand, design, website, app interface, code,
                 and original materials belong to UmmahWay or its licensors.
@@ -351,14 +383,14 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="11. App Stores And Third-Party Services">
+            <Section title="12. App Stores And Third-Party Services">
               <p>
                 The mobile app may be distributed through Apple App Store and
                 Google Play. Those stores may apply their own terms and privacy
                 rules. UmmahWay may also rely on third-party providers for
                 hosting, authentication, storage, maps, analytics, purchase
-                validation, notifications, support, email delivery, and TV
-                display delivery.
+                validation, notifications, support, email delivery, private CV
+                storage, recruitment tooling, and TV display delivery.
               </p>
               <p>
                 We are not responsible for third-party outages, policy changes,
@@ -367,7 +399,7 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="12. Availability And Changes">
+            <Section title="13. Availability And Changes">
               <p>
                 We aim to keep UmmahWay reliable, but we do not guarantee that
                 the service will always be available, error-free, complete, or
@@ -378,7 +410,7 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="13. Disclaimer Of Warranties">
+            <Section title="14. Disclaimer Of Warranties">
               <p>
                 UmmahWay is provided on an &quot;as is&quot; and &quot;as
                 available&quot; basis. To the maximum extent permitted by law, we
@@ -387,14 +419,14 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="14. Limitation Of Liability">
+            <Section title="15. Limitation Of Liability">
               <p>
                 To the maximum extent permitted by law, UmmahWay is not liable
                 for indirect, incidental, special, consequential, or punitive
                 damages, or for losses caused by inaccurate community content,
                 missed notifications, outages, map errors, purchase-provider
-                issues, user conduct, admin mistakes, public display misuse, or
-                third-party services.
+                issues, recruitment decisions, user conduct, admin mistakes,
+                public display misuse, or third-party services.
               </p>
               <p>
                 Nothing in these Terms limits liability where the law does not
@@ -402,7 +434,7 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="15. Termination">
+            <Section title="16. Termination">
               <p>
                 You may stop using UmmahWay at any time. We may suspend or
                 terminate access if you violate these Terms, misuse the service,
@@ -411,7 +443,7 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="16. Governing Law">
+            <Section title="17. Governing Law">
               <p>
                 These Terms are governed by the laws applicable in Italy,
                 without prejudice to mandatory consumer protection rights that
@@ -419,17 +451,17 @@ const TermsPage: React.FC = () => {
               </p>
             </Section>
 
-            <Section title="17. Changes To These Terms">
+            <Section title="18. Changes To These Terms">
               <p>
                 We may update these Terms as UmmahWay grows or legal,
-                purchase-provider, app-store, or product requirements change.
-                The updated date above shows the latest version. Continued use
-                of UmmahWay after changes become effective means you accept the
-                updated Terms.
+                purchase-provider, app-store, recruitment, or product
+                requirements change. The updated date above shows the latest
+                version. Continued use of UmmahWay after changes become
+                effective means you accept the updated Terms.
               </p>
             </Section>
 
-            <Section title="18. Contact">
+            <Section title="19. Contact">
               <p>
                 For questions about these Terms, contact{" "}
                 <a

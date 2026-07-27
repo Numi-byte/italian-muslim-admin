@@ -704,6 +704,23 @@ const CareersPage: React.FC = () => {
                     I agree to be contacted by email about this application.
                   </span>
                 </label>
+                <p className="pl-7 text-xs leading-5 text-slate-500">
+                  Read the{" "}
+                  <Link
+                    to="/privacy"
+                    className="font-bold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                  >
+                    Privacy Policy
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    to="/terms"
+                    className="font-bold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                  >
+                    Terms &amp; Conditions
+                  </Link>
+                  .
+                </p>
               </div>
 
               <button
