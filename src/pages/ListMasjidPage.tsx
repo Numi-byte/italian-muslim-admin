@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import FooterLocaleControls from "../components/FooterLocaleControls";
 import PublicNav from "../components/PublicNav";
 import { ContactSupportPanel } from "./ContactPage";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
@@ -100,6 +101,18 @@ const ListMasjidPage: React.FC = () => {
           languageCode={languageCode}
         />
       </main>
+
+      <footer className="border-t border-[#e7e1d3] bg-[#f7f4ec]">
+        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 text-sm font-medium text-[#4a5852] sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <span className="text-[#9a8c68]">
+            &copy; {new Date().getFullYear()} UmmahWay
+          </span>
+          <FooterLocaleControls
+            countryCode={countryCode}
+            languageCode={languageCode}
+          />
+        </div>
+      </footer>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import FooterLocaleControls from "../components/FooterLocaleControls";
 import PublicNav from "../components/PublicNav";
 import { supabase } from "../lib/supabaseClient";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
@@ -1041,6 +1042,10 @@ const CareersPage: React.FC = () => {
               UmmahWay
             </p>
           </div>
+          <FooterLocaleControls
+            countryCode={countryCode}
+            languageCode={languageCode}
+          />
           <div className="flex flex-wrap gap-4 text-sm font-medium text-[#4a5852]">
             <Link to="/privacy" className="hover:text-[#0f5c46]">
               Privacy

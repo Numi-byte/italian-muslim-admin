@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import CountrySelector from "../components/CountrySelector";
+import FooterLocaleControls from "../components/FooterLocaleControls";
 import PublicNav from "../components/PublicNav";
 import { supabase } from "../lib/supabaseClient";
 import {
@@ -1277,6 +1278,10 @@ const PublicHomePage: React.FC = () => {
               </p>
             </div>
           </div>
+          <FooterLocaleControls
+            countryCode={selectedCountry.code}
+            languageCode={languageCode}
+          />
           <div className="flex flex-wrap gap-4 text-sm font-medium text-[#4a5852]">
             {publicLinks.map((link) => (
               <Link key={link.path} to={link.path} className="hover:text-[#0f5c46]">

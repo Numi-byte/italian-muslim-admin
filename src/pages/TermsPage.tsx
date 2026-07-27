@@ -1,6 +1,7 @@
 // src/pages/TermsPage.tsx
 import React, { useEffect } from "react";
 import { Link } from "react-router";
+import FooterLocaleControls from "../components/FooterLocaleControls";
 import PublicNav from "../components/PublicNav";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 import { usePublicLanguage } from "../lib/usePublicLanguage";
@@ -481,6 +482,10 @@ const TermsPage: React.FC = () => {
       <footer className="border-t border-[#dfe5df] bg-[#edf2ee]">
         <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-5 text-sm font-bold text-[#536260] sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <span>&copy; {new Date().getFullYear()} UmmahWay</span>
+          <FooterLocaleControls
+            countryCode={countryCode}
+            languageCode={languageCode}
+          />
           <div className="flex flex-wrap gap-4">
             <Link to="/privacy" className="hover:text-[#0b6b62]">
               {t("publicPages.common.privacyPolicy")}

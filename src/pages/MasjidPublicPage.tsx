@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import CountrySelector from "../components/CountrySelector";
+import FooterLocaleControls from "../components/FooterLocaleControls";
 import LanguageSelector from "../components/LanguageSelector";
 import {
   getCountryByCode,
@@ -750,16 +751,6 @@ const MasjidPublicPage: React.FC = () => {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            <CountrySelector
-              selectedCode={pageCountry.code}
-              currentPath="/masjids"
-              label={t("language.country")}
-              className="hidden text-[#4a5852] lg:inline-flex"
-            />
-            <LanguageSelector
-              selectedCode={languageCode}
-              className="hidden text-[#4a5852] lg:inline-flex"
-            />
             <a
               href={tvHref}
               target="_blank"
@@ -1205,6 +1196,11 @@ const MasjidPublicPage: React.FC = () => {
               </p>
             </div>
           </div>
+          <FooterLocaleControls
+            countryCode={pageCountry.code}
+            currentPath="/masjids"
+            languageCode={languageCode}
+          />
           <div className="flex flex-wrap gap-4 text-sm font-medium text-[#4a5852]">
             <Link to="/" className="hover:text-[#0f5c46]">
               {t("masjid.allMasjids")}

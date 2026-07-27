@@ -214,17 +214,6 @@ const PublicNav: React.FC<PublicNavProps> = ({
           </nav>
 
           <div className="flex items-center gap-2">
-            {countryCode && (
-              <CountrySelector
-                selectedCode={countryCode}
-                label={t("language.country")}
-                className="hidden text-[#4a5852] lg:inline-flex"
-              />
-            )}
-            <LanguageSelector
-              selectedCode={languageCode}
-              className="hidden text-[#4a5852] lg:inline-flex"
-            />
             <Link
               to="/login"
               className="hidden rounded-lg px-3 py-2 text-sm font-medium text-[#4a5852] hover:bg-white md:inline-flex"
