@@ -27,7 +27,6 @@ const ANALYTICS_ROUTES: AnalyticsRoute[] = [
     section: "public",
   },
   { pattern: "/tv", route: "/tv", section: "public" },
-  { pattern: "/sponsor", route: "/sponsor", section: "public" },
   { pattern: "/contact", route: "/contact", section: "public" },
   { pattern: "/confirm-email", route: "/confirm-email", section: "auth" },
   { pattern: "/auth/confirm", route: "/auth/confirm", section: "auth" },

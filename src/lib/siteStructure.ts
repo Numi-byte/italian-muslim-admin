@@ -23,13 +23,6 @@ export const PUBLIC_SITE_LINKS = [
       "Open the screen-friendly UmmahWay TV display for mosque halls, entrances, and community displays.",
   },
   {
-    name: "Sponsor Community Offers",
-    navLabel: "Sponsors",
-    path: "/sponsor",
-    description:
-      "Apply to share reviewed sponsor offers with Muslim communities through UmmahWay.",
-  },
-  {
     name: "Careers at UmmahWay",
     navLabel: "Careers",
     path: "/careers",

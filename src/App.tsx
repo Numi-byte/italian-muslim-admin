@@ -38,9 +38,6 @@ const PublicHomePage = lazy(() => import("./pages/PublicHomePage"));
 const MasjidPublicPage = lazy(() => import("./pages/MasjidPublicPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const MasjidsAdminPage = lazy(() => import("./pages/MasjidsAdminPage"));
-const BusinessSponsorshipPage = lazy(
-  () => import("./pages/BusinessSponsorshipPage")
-);
 const SponsoredAdsPage = lazy(() => import("./pages/SponsoredAdsPage"));
 const CareersPage = lazy(() => import("./pages/CareersPage"));
 const CareersAdminPage = lazy(() => import("./pages/CareersAdminPage"));
@@ -556,7 +553,6 @@ const App: React.FC = () => {
             <Route path="/masjids/:slug" element={<MasjidPublicPage />} />
             <Route path="/list-your-masjid" element={<ListMasjidPage />} />
             <Route path="/tv" element={<TvPage />} />
-            <Route path="/sponsor" element={<BusinessSponsorshipPage />} />
             <Route path="/careers" element={<CareersPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/confirm-email" element={<ConfirmEmailPage />} />

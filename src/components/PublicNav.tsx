@@ -109,7 +109,6 @@ const NAV_ICONS: Record<string, NavIconName> = {
   "/masjids": "home",
   "/list-your-masjid": "pin",
   "/tv": "screen",
-  "/sponsor": "tag",
   "/careers": "briefcase",
   "/contact": "mail",
 };

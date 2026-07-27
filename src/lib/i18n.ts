@@ -78,12 +78,6 @@ export const translations = {
         description:
           "Open the screen-friendly UmmahWay TV display for mosque halls, entrances, and community displays.",
       },
-      sponsor: {
-        name: "Sponsor Community Offers",
-        navLabel: "Sponsors",
-        description:
-          "Apply to share reviewed sponsor offers with Muslim communities through UmmahWay.",
-      },
       careers: {
         name: "Careers at UmmahWay",
         navLabel: "Careers",
@@ -368,12 +362,6 @@ export const translations = {
         navLabel: "TV",
         description:
           "Öffne die bildschirmfreundliche TV-Anzeige für Gebetsräume, Eingänge und Gemeindeflächen.",
-      },
-      sponsor: {
-        name: "Gemeindeangebote sponsern",
-        navLabel: "Sponsoren",
-        description:
-          "Bewirb dich, geprüfte Sponsor-Angebote mit muslimischen Gemeinden über UmmahWay zu teilen.",
       },
       careers: {
         name: "Karriere bei UmmahWay",
@@ -661,12 +649,6 @@ export const translations = {
         description:
           "Apri lo schermo UmmahWay ottimizzato per sale di preghiera, ingressi e spazi comunitari.",
       },
-      sponsor: {
-        name: "Sponsorizza offerte per la comunità",
-        navLabel: "Sponsor",
-        description:
-          "Candidati per condividere offerte sponsorizzate revisionate con le comunità musulmane tramite UmmahWay.",
-      },
       careers: {
         name: "Lavora con UmmahWay",
         navLabel: "Carriere",
@@ -952,12 +934,6 @@ export const translations = {
         description:
           "مسجد ہال، داخلی راستوں اور کمیونٹی اسکرینوں کے لئے واضح ٹی وی ڈسپلے کھولیں۔",
       },
-      sponsor: {
-        name: "کمیونٹی آفرز اسپانسر کریں",
-        navLabel: "اسپانسرز",
-        description:
-          "UmmahWay کے ذریعے مسلم کمیونٹیز کے ساتھ منظور شدہ اسپانسر آفرز شیئر کرنے کے لئے درخواست دیں۔",
-      },
       careers: {
         name: "UmmahWay میں کیریئر",
         navLabel: "کیریئر",
@@ -1242,12 +1218,6 @@ export const translations = {
         navLabel: "التلفاز",
         description:
           "افتح شاشة UmmahWay المناسبة للمداخل وقاعات الصلاة وشاشات المجتمع.",
-      },
-      sponsor: {
-        name: "رعاية عروض المجتمع",
-        navLabel: "الرعاة",
-        description:
-          "قدّم طلباً لمشاركة عروض رعاية مراجعة مع المجتمعات المسلمة عبر UmmahWay.",
       },
       careers: {
         name: "الوظائف في UmmahWay",
@@ -1582,12 +1552,6 @@ export function getLocalizedPublicLinks(language: LanguageCode) {
       navLabel: t("links.tv.navLabel"),
       path: "/tv",
       description: t("links.tv.description"),
-    },
-    {
-      name: t("links.sponsor.name"),
-      navLabel: t("links.sponsor.navLabel"),
-      path: "/sponsor",
-      description: t("links.sponsor.description"),
     },
     {
       name: t("links.careers.name"),
