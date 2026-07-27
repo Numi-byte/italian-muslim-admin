@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import CountrySelector from "../components/CountrySelector";
+import PublicNav from "../components/PublicNav";
 import { supabase } from "../lib/supabaseClient";
 import {
   DEFAULT_COUNTRY_CODE,
@@ -757,18 +758,10 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
 const PublicHomePage: React.FC = () => {
   const countryPreference = useCountryPreference();
   const selectedCountry = countryPreference.country;
-  const [isScrolled, setIsScrolled] = useState(false);
   const [masjids, setMasjids] = useState<ActiveMasjid[]>([]);
   const [loadingMasjids, setLoadingMasjids] = useState(true);
   const [masjidsError, setMasjidsError] = useState<string | null>(null);
   const currentYear = new Date().getFullYear();
-
-  useEffect(() => {
-    const updateHeader = () => setIsScrolled(window.scrollY > 24);
-    updateHeader();
-    window.addEventListener("scroll", updateHeader, { passive: true });
-    return () => window.removeEventListener("scroll", updateHeader);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -909,61 +902,12 @@ const PublicHomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased">
-      <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? "border-b border-[#e7e1d3] bg-[#f7f4ec]/95 shadow-sm backdrop-blur"
-            : "bg-[#f7f4ec]/75 backdrop-blur"
-        }`}
-      >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link
-            to="/"
-            className="flex items-center gap-3"
-            aria-label="UmmahWay home"
-          >
-            <img src="/icon.png" alt="" className="h-10 w-10 rounded-lg shadow-sm" />
-            <div>
-              <span className="block font-display text-xl font-semibold leading-tight text-[#0a3d30]">
-                UmmahWay
-              </span>
-              <span className="hidden text-[10px] font-medium uppercase text-[#9a8c68] sm:block">
-                {selectedCountry.name} masjid prayer times
-              </span>
-            </div>
-          </Link>
-
-          <nav className="hidden items-center gap-7 text-sm font-medium text-[#4a5852] md:flex">
-            {PUBLIC_SITE_LINKS.map((link) => (
-              <Link key={link.path} to={link.path} className="hover:text-[#0f5c46]">
-                {link.navLabel}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <CountrySelector
-              selectedCode={selectedCountry.code}
-              className="hidden text-[#4a5852] lg:inline-flex"
-            />
-            <Link
-              to="/login"
-              className="hidden rounded-lg px-3 py-2 text-sm font-medium text-[#4a5852] hover:bg-white sm:inline-flex"
-            >
-              Admin
-            </Link>
-            <a
-              href={TV_APP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg bg-[#0f5c46] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0a3d30]"
-            >
-              <Icon name="screen" className="h-4 w-4" />
-              Display
-            </a>
-          </div>
-        </div>
-      </header>
+      <PublicNav
+        fixedHeader
+        showBottomBar
+        tagline={`${selectedCountry.name} masjid prayer times`}
+        countryCode={selectedCountry.code}
+      />
 
       <main>
         <section className="relative overflow-hidden border-b border-[#e7e1d3] bg-[#eef2ea] pt-16">
@@ -1306,42 +1250,6 @@ const PublicHomePage: React.FC = () => {
         </div>
       </footer>
 
-      <nav className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-[#0f5c46]/40 bg-[#0a3d30]/95 px-2 py-2 text-white shadow-2xl shadow-black/30 backdrop-blur md:hidden">
-        <div className="grid grid-cols-4 text-center text-[11px] font-medium text-white/70">
-          {[
-            { href: "/masjids", label: "Masjids", icon: "home" as const },
-            { href: "/list-your-masjid", label: "List", icon: "pin" as const },
-            { href: "/tv", label: "TV", icon: "screen" as const },
-            { href: "/login", label: "Admin", icon: "shield" as const },
-          ].map((item) =>
-            item.href.startsWith("/") ? (
-              <Link key={item.label} to={item.href} className="group py-1">
-                <span className="mx-auto mb-1 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white/70 group-hover:border-[#e6cf9a] group-hover:text-[#e6cf9a]">
-                  <Icon name={item.icon} className="h-4 w-4" />
-                </span>
-                {item.label}
-              </Link>
-            ) : (
-              <a
-                key={item.label}
-                href={item.href}
-                target={item.href.startsWith("http") ? "_blank" : undefined}
-                rel={
-                  item.href.startsWith("http")
-                    ? "noopener noreferrer"
-                    : undefined
-                }
-                className="group py-1"
-              >
-                <span className="mx-auto mb-1 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white/70 group-hover:border-[#e6cf9a] group-hover:text-[#e6cf9a]">
-                  <Icon name={item.icon} className="h-4 w-4" />
-                </span>
-                {item.label}
-              </a>
-            )
-          )}
-        </div>
-      </nav>
     </div>
   );
 };
