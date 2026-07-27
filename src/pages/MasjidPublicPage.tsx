@@ -1,11 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import CountrySelector from "../components/CountrySelector";
+import LanguageSelector from "../components/LanguageSelector";
 import {
   getCountryByCode,
   inferMasjidCountryCode,
 } from "../lib/countryConfig";
 import { useCountryPreference } from "../lib/countryRouting";
+import {
+  getLocalizedCountryName,
+  isRtlLanguage,
+  makeTranslator,
+} from "../lib/i18n";
+import { useLanguagePreference } from "../lib/languageRouting";
 import { supabase } from "../lib/supabaseClient";
 import { STORE_LINKS, getMasjidPath, getMasjidTvUrl } from "../lib/publicLinks";
 import { getCanonicalUrl, getCountryAlternates, setPageSeo } from "../lib/seo";
@@ -188,14 +195,6 @@ const StarLattice: React.FC<{ className?: string; id: string }> = ({
   </svg>
 );
 
-const prayerLabels: Record<PrayerKey, string> = {
-  fajr: "Fajr",
-  dhuhr: "Dhuhr",
-  asr: "Asr",
-  maghrib: "Maghrib",
-  isha: "Isha",
-};
-
 const prayerArabic: Record<PrayerKey, string> = {
   fajr: "الفجر",
   dhuhr: "الظهر",
@@ -205,14 +204,6 @@ const prayerArabic: Record<PrayerKey, string> = {
 };
 
 const prayerOrder: PrayerKey[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
-
-const categoryLabels: Record<AnnouncementRow["category"], string> = {
-  general: "Notice",
-  jumuah: "Jumu'ah",
-  event: "Event",
-  ramadan: "Ramadan",
-  urgent: "Urgent",
-};
 
 function getIsoDateForTimeZone(timeZone = "Europe/Rome") {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -229,8 +220,12 @@ function getIsoDateForTimeZone(timeZone = "Europe/Rome") {
   return `${year}-${month}-${day}`;
 }
 
-function formatDisplayDate(dateIso: string, timeZone: string) {
-  return new Intl.DateTimeFormat("en-GB", {
+function formatDisplayDate(
+  dateIso: string,
+  timeZone: string,
+  languageCode: string
+) {
+  return new Intl.DateTimeFormat(getDateLocale(languageCode), {
     day: "numeric",
     month: "long",
     timeZone,
@@ -239,16 +234,27 @@ function formatDisplayDate(dateIso: string, timeZone: string) {
   }).format(new Date(`${dateIso}T12:00:00Z`));
 }
 
-function formatHijriDate(dateIso: string) {
+function formatHijriDate(dateIso: string, languageCode: string) {
   try {
-    return new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(`${dateIso}T12:00:00Z`));
+    return new Intl.DateTimeFormat(
+      `${getDateLocale(languageCode)}-u-ca-islamic-umalqura`,
+      {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }
+    ).format(new Date(`${dateIso}T12:00:00Z`));
   } catch {
     return null;
   }
+}
+
+function getDateLocale(languageCode: string) {
+  if (languageCode === "de") return "de-DE";
+  if (languageCode === "it") return "it-IT";
+  if (languageCode === "ur") return "ur-PK";
+  if (languageCode === "ar") return "ar";
+  return "en-GB";
 }
 
 function getCurrentDayParts(timeZone: string) {
@@ -546,6 +552,16 @@ const MasjidPublicPage: React.FC = () => {
   const pageCountry =
     getCountryByCode(masjid ? inferMasjidCountryCode(masjid) : null) ??
     countryPreference.country;
+  const languageCode = useLanguagePreference(pageCountry.code);
+  const languageMeta = useMemo(
+    () => ({ dir: isRtlLanguage(languageCode) ? "rtl" : "ltr" }),
+    [languageCode]
+  );
+  const t = useMemo(() => makeTranslator(languageCode), [languageCode]);
+  const pageCountryName = useMemo(
+    () => getLocalizedCountryName(pageCountry, languageCode),
+    [languageCode, pageCountry]
+  );
 
   // Which jama'ah is next, plus a live second-by-second countdown to it.
   const schedule = useMemo(() => {
@@ -556,7 +572,7 @@ const MasjidPublicPage: React.FC = () => {
       const key = prayerOrder[index];
       return {
         key,
-        label: prayerLabels[key],
+        label: t(`prayers.${key}`),
         arabic: prayerArabic[key],
         begins: displayTime(getPrayerStart(row, key)),
         jamaah: displayTime(row?.jamaat_time),
@@ -580,7 +596,7 @@ const MasjidPublicPage: React.FC = () => {
     }
 
     return { rows, nextKey: nextRow?.key ?? null, nextRow, countdownSeconds };
-  }, [orderedPrayerTimes, timeZone, nowTick]);
+  }, [orderedPrayerTimes, timeZone, nowTick, t]);
 
   useEffect(() => {
     if (!masjid) return;
@@ -588,10 +604,14 @@ const MasjidPublicPage: React.FC = () => {
     const titleName = masjid.short_name || masjid.official_name;
     const path = getMasjidPath(masjid.slug);
     const canonicalUrl = getCanonicalUrl(pageCountry.code, path);
-    const description = `${masjid.official_name} in ${masjid.city}, ${pageCountry.name}: daily prayer times, Jumu'ah timetable, announcements, directions, and UmmahWay TV display.`;
+    const description = t("masjid.seoDescription", {
+      name: masjid.official_name,
+      city: masjid.city,
+      country: pageCountryName,
+    });
 
     setPageSeo({
-      title: `${titleName} Prayer Times & Jumu'ah | UmmahWay`,
+      title: t("masjid.seoTitle", { name: titleName }),
       description,
       canonicalUrl,
       alternates: getCountryAlternates(path),
@@ -637,7 +657,9 @@ const MasjidPublicPage: React.FC = () => {
             {
               "@type": "ListItem",
               position: 2,
-              name: `Masjids in ${pageCountry.name}`,
+              name: t("masjid.breadcrumbMasjids", {
+                country: pageCountryName,
+              }),
               item: getCanonicalUrl(pageCountry.code, "/masjids"),
             },
             {
@@ -650,7 +672,7 @@ const MasjidPublicPage: React.FC = () => {
         },
       ],
     });
-  }, [masjid, pageCountry]);
+  }, [masjid, pageCountry, pageCountryName, t]);
 
   if (loading) {
     return (
@@ -670,14 +692,14 @@ const MasjidPublicPage: React.FC = () => {
       <main className="flex min-h-screen items-center justify-center bg-[#f7f4ec] px-4 text-[#1c2b26]">
         <div className="max-w-md rounded-2xl border border-[#e7e1d3] bg-white p-8 text-center shadow-sm">
           <p className="font-display text-3xl font-semibold">
-            Page unavailable
+            {t("masjid.pageUnavailable")}
           </p>
           <p className="mt-3 text-[#6b7a74]">{error}</p>
           <Link
             to="/"
             className="mt-6 inline-flex rounded-lg bg-[#0f5c46] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0a3d30]"
           >
-            Back to all masjids
+            {t("masjid.backToMasjids")}
           </Link>
         </div>
       </main>
@@ -688,12 +710,16 @@ const MasjidPublicPage: React.FC = () => {
   const address = getAddress(masjid);
   const mapsHref = getMapsHref(masjid);
   const tvHref = getMasjidTvUrl();
-  const displayDate = formatDisplayDate(pageDate, timeZone);
-  const hijriDate = formatHijriDate(pageDate);
+  const displayDate = formatDisplayDate(pageDate, timeZone, languageCode);
+  const hijriDate = formatHijriDate(pageDate, languageCode);
   const heroAnnouncement = announcements[0] ?? null;
 
   return (
-    <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased">
+    <div
+      dir={languageMeta.dir}
+      lang={languageCode}
+      className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased"
+    >
       <header className="sticky top-0 z-50 border-b border-[#e7e1d3] bg-[#f7f4ec]/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex min-w-0 items-center gap-3">
@@ -710,16 +736,16 @@ const MasjidPublicPage: React.FC = () => {
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#4a5852] md:flex">
             <a href="#prayers" className="hover:text-[#0f5c46]">
-              Prayer Times
+              {t("masjid.prayerTimes")}
             </a>
             <a href="#jumuah" className="hover:text-[#0f5c46]">
               Jumu'ah
             </a>
             <a href="#news" className="hover:text-[#0f5c46]">
-              News
+              {t("masjid.news")}
             </a>
             <a href="#visit" className="hover:text-[#0f5c46]">
-              Visit Us
+              {t("masjid.visitUs")}
             </a>
           </nav>
 
@@ -727,6 +753,11 @@ const MasjidPublicPage: React.FC = () => {
             <CountrySelector
               selectedCode={pageCountry.code}
               currentPath="/masjids"
+              label={t("language.country")}
+              className="hidden text-[#4a5852] lg:inline-flex"
+            />
+            <LanguageSelector
+              selectedCode={languageCode}
               className="hidden text-[#4a5852] lg:inline-flex"
             />
             <a
@@ -736,7 +767,7 @@ const MasjidPublicPage: React.FC = () => {
               className="hidden items-center gap-2 rounded-lg border border-[#d8cfb8] bg-white px-3 py-2 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40 sm:inline-flex"
             >
               <Icon name="screen" className="h-4 w-4" />
-              Display
+              {t("masjid.display")}
             </a>
             <a
               href={mapsHref}
@@ -745,8 +776,22 @@ const MasjidPublicPage: React.FC = () => {
               className="inline-flex items-center gap-2 rounded-lg bg-[#0f5c46] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#0a3d30]"
             >
               <Icon name="pin" className="h-4 w-4" />
-              Directions
+              {t("masjid.directions")}
             </a>
+          </div>
+        </div>
+        <div className="border-t border-[#e7e1d3] px-4 py-2 lg:hidden">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
+            <CountrySelector
+              selectedCode={pageCountry.code}
+              currentPath="/masjids"
+              label={t("language.country")}
+              className="text-[#4a5852]"
+            />
+            <LanguageSelector
+              selectedCode={languageCode}
+              className="text-[#4a5852]"
+            />
           </div>
         </div>
       </header>
@@ -788,7 +833,7 @@ const MasjidPublicPage: React.FC = () => {
               </span>
             </p>
             <p className="mt-3 text-sm font-semibold text-[#e6cf9a]">
-              {pageCountry.name}
+              {pageCountryName}
             </p>
 
             <div className="mx-auto mt-6 flex max-w-xl flex-col items-center justify-center gap-1.5 text-sm text-white/75 sm:flex-row sm:gap-4">
@@ -810,7 +855,7 @@ const MasjidPublicPage: React.FC = () => {
             {/* Next jama'ah — the piece a visitor looks for first */}
             <div className="mx-auto mt-10 inline-flex w-full max-w-md flex-col items-center rounded-2xl border border-white/10 bg-white/[0.06] px-6 py-5 backdrop-blur">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#e6cf9a]">
-                Next Jama'ah
+                {t("masjid.nextJamaah")}
               </p>
               {schedule.nextRow ? (
                 <>
@@ -824,13 +869,15 @@ const MasjidPublicPage: React.FC = () => {
                   </div>
                   {schedule.countdownSeconds != null && (
                     <p className="mt-2 text-sm text-white/60">
-                      in {formatCountdown(schedule.countdownSeconds)}
+                      {t("masjid.inCountdown", {
+                        time: formatCountdown(schedule.countdownSeconds),
+                      })}
                     </p>
                   )}
                 </>
               ) : (
                 <p className="mt-3 text-sm text-white/60">
-                  Today's timetable has not been published yet.
+                  {t("masjid.noTimetableToday")}
                 </p>
               )}
             </div>
@@ -844,15 +891,17 @@ const MasjidPublicPage: React.FC = () => {
               <div className="flex flex-col gap-1 border-b border-[#efeadd] bg-[#faf8f1] px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="font-display text-2xl font-semibold text-[#1c2b26]">
-                    Prayer Timetable
+                    {t("masjid.prayerTimetable")}
                   </h2>
                   <p className="mt-1 text-sm text-[#6b7a74]">
-                    Today, {displayDate}
+                    {t("masjid.todayDate", { date: displayDate })}
                   </p>
                 </div>
                 <div className="hidden items-center gap-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9a8c68] sm:flex">
-                  <span>Begins</span>
-                  <span className="text-[#0f5c46]">Jama'ah</span>
+                  <span>{t("masjid.begins")}</span>
+                  <span className="text-[#0f5c46]">
+                    {t("masjid.jamaah")}
+                  </span>
                 </div>
               </div>
 
@@ -881,7 +930,7 @@ const MasjidPublicPage: React.FC = () => {
                             {row.label}
                             {isNext && (
                               <span className="rounded-full bg-[#0f5c46] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
-                                Next
+                                {t("masjid.next")}
                               </span>
                             )}
                           </p>
@@ -893,7 +942,7 @@ const MasjidPublicPage: React.FC = () => {
 
                       <div className="hidden text-right sm:block">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b0a483] sm:hidden">
-                          Begins
+                          {t("masjid.begins")}
                         </p>
                         <p className="text-lg font-medium tabular-nums text-[#4a5852]">
                           {row.begins}
@@ -907,7 +956,7 @@ const MasjidPublicPage: React.FC = () => {
 
                       <div className="text-right">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b0a483] sm:hidden">
-                          Jama'ah
+                          {t("masjid.jamaah")}
                         </p>
                         <p
                           className={`font-display text-2xl font-semibold tabular-nums ${
@@ -932,11 +981,11 @@ const MasjidPublicPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-[#d8cfb8]" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                  Friday
+                  {t("masjid.friday")}
                 </p>
               </div>
               <h2 className="mt-2 font-display text-3xl font-semibold">
-                Jumu'ah Prayer
+                {t("masjid.jumuahPrayer")}
               </h2>
 
               <div className="mt-6 space-y-3">
@@ -950,12 +999,20 @@ const MasjidPublicPage: React.FC = () => {
                         <div>
                           <h3 className="font-display text-xl font-semibold">
                             {jumuahTimes.length > 1
-                              ? `${row.slot === 1 ? "First" : row.slot === 2 ? "Second" : `Slot ${row.slot}`} Jama'ah`
-                              : "Congregation"}
+                              ? `${
+                                  row.slot === 1
+                                    ? t("masjid.first")
+                                    : row.slot === 2
+                                      ? t("masjid.second")
+                                      : t("masjid.slot", { slot: row.slot })
+                                } ${t("masjid.jamaah")}`
+                              : t("masjid.congregation")}
                           </h3>
                           <p className="mt-1 text-sm text-[#6b7a74]">
-                            Khutbah {displayTime(row.khutbah_time)}
-                            {row.language ? ` · ${row.language}` : ""}
+                            {t("masjid.khutbah", {
+                              time: displayTime(row.khutbah_time),
+                            })}
+                            {row.language ? ` - ${row.language}` : ""}
                           </p>
                         </div>
                         <p className="font-display text-3xl font-semibold text-[#0f5c46]">
@@ -971,7 +1028,7 @@ const MasjidPublicPage: React.FC = () => {
                   ))
                 ) : (
                   <p className="rounded-2xl border border-[#e7e1d3] bg-white p-5 text-sm text-[#6b7a74]">
-                    The Jumu'ah timetable will appear here once it is set.
+                    {t("masjid.noJumuah")}
                   </p>
                 )}
               </div>
@@ -981,11 +1038,11 @@ const MasjidPublicPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-[#d8cfb8]" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                  From the masjid
+                  {t("masjid.fromMasjid")}
                 </p>
               </div>
               <h2 className="mt-2 font-display text-3xl font-semibold">
-                News &amp; Notices
+                {t("masjid.newsNotices")}
               </h2>
 
               <div className="mt-6 space-y-3">
@@ -1006,7 +1063,7 @@ const MasjidPublicPage: React.FC = () => {
                               : "bg-[#f2efe4] text-[#0f5c46]"
                           }`}
                         >
-                          {categoryLabels[row.category]}
+                          {t(`categories.${row.category}`)}
                         </span>
                       </div>
                       <p className="mt-3 text-sm leading-7 text-[#4a5852]">
@@ -1016,7 +1073,7 @@ const MasjidPublicPage: React.FC = () => {
                   ))
                 ) : (
                   <p className="rounded-2xl border border-[#e7e1d3] bg-white p-5 text-sm text-[#6b7a74]">
-                    There are no notices at the moment.
+                    {t("masjid.noNotices")}
                   </p>
                 )}
               </div>
@@ -1031,16 +1088,19 @@ const MasjidPublicPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-[#d8cfb8]" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                  Find us
+                  {t("masjid.findUs")}
                 </p>
               </div>
               <h2 className="mt-2 font-display text-3xl font-semibold leading-tight">
-                Visit the masjid
+                {t("masjid.visitTitle")}
               </h2>
               <p className="mt-4 max-w-xl leading-8 text-[#4a5852]">
                 {address
-                  ? `You'll find us at ${address}. Everyone is welcome for the five daily prayers and Jumu'ah.`
-                  : `${masjid.official_name} is in ${masjid.city}. Everyone is welcome for the five daily prayers and Jumu'ah.`}
+                  ? t("masjid.visitWithAddress", { address })
+                  : t("masjid.visitWithCity", {
+                      name: masjid.official_name,
+                      city: masjid.city,
+                    })}
               </p>
 
               <div className="mt-7 grid gap-3 sm:grid-cols-3">
@@ -1048,20 +1108,20 @@ const MasjidPublicPage: React.FC = () => {
                   {
                     href: mapsHref,
                     icon: "compass" as const,
-                    label: "Directions",
-                    text: "Open in Maps",
+                    label: t("masjid.directions"),
+                    text: t("masjid.openInMaps"),
                   },
                   {
                     href: tvHref,
                     icon: "screen" as const,
-                    label: "Hall Display",
-                    text: "Timetable screen",
+                    label: t("masjid.hallDisplay"),
+                    text: t("masjid.timetableScreen"),
                   },
                   {
                     href: STORE_LINKS.ios,
                     icon: "phone" as const,
-                    label: "Mobile App",
-                    text: "Times on the go",
+                    label: t("masjid.mobileApp"),
+                    text: t("masjid.timesOnTheGo"),
                   },
                 ].map((item) => (
                   <a
@@ -1095,14 +1155,14 @@ const MasjidPublicPage: React.FC = () => {
                   حَيَّ عَلَى الصَّلَاة
                 </p>
                 <h3 className="mt-3 font-display text-2xl font-semibold">
-                  A house of prayer for the community
+                  {t("masjid.communityTitle")}
                 </h3>
                 <div className="mt-6 grid gap-3">
                   {[
-                    "Five daily prayers in congregation",
-                    "Jumu'ah khutbah and prayer every Friday",
-                    "Timetable kept current throughout the year",
-                    "Ramadan, Eid and community gatherings",
+                    t("masjidHighlights.daily"),
+                    t("masjidHighlights.jumuah"),
+                    t("masjidHighlights.current"),
+                    t("masjidHighlights.gatherings"),
                   ].map((item) => (
                     <div key={item} className="flex items-start gap-3">
                       <span className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-md bg-[#e6cf9a] text-[#0a3d30]">
@@ -1118,7 +1178,7 @@ const MasjidPublicPage: React.FC = () => {
                 {heroAnnouncement && (
                   <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.06] p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#e6cf9a]">
-                      Latest notice
+                      {t("masjid.latestNotice")}
                     </p>
                     <h4 className="mt-2 font-display text-lg font-semibold">
                       {heroAnnouncement.title}
@@ -1147,7 +1207,7 @@ const MasjidPublicPage: React.FC = () => {
           </div>
           <div className="flex flex-wrap gap-4 text-sm font-medium text-[#4a5852]">
             <Link to="/" className="hover:text-[#0f5c46]">
-              All masjids
+              {t("masjid.allMasjids")}
             </Link>
             <a
               href={tvHref}
@@ -1155,28 +1215,36 @@ const MasjidPublicPage: React.FC = () => {
               rel="noopener noreferrer"
               className="hover:text-[#0f5c46]"
             >
-              Display
+              {t("masjid.display")}
             </a>
             <Link to="/privacy" className="hover:text-[#0f5c46]">
-              Privacy
+              {t("nav.privacy")}
             </Link>
             <Link to="/contact" className="hover:text-[#0f5c46]">
-              Contact
+              {t("nav.contact")}
             </Link>
           </div>
         </div>
         <div className="border-t border-[#efeadd] py-4 text-center text-xs text-[#9a8c68]">
-          Prayer times and notices maintained by the masjid · UmmahWay
+          {t("masjid.footerNote")}
         </div>
       </footer>
 
       <nav className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-[#0f5c46]/40 bg-[#0a3d30]/95 px-2 py-2 text-white shadow-2xl shadow-black/30 backdrop-blur md:hidden">
         <div className="grid grid-cols-4 text-center text-[11px] font-medium text-white/70">
           {[
-            { href: "#prayers", label: "Prayers", icon: "clock" as const },
+            {
+              href: "#prayers",
+              label: t("masjid.bottomPrayers"),
+              icon: "clock" as const,
+            },
             { href: "#jumuah", label: "Jumu'ah", icon: "calendar" as const },
-            { href: "#news", label: "News", icon: "bell" as const },
-            { href: tvHref, label: "Display", icon: "screen" as const },
+            { href: "#news", label: t("masjid.news"), icon: "bell" as const },
+            {
+              href: tvHref,
+              label: t("masjid.display"),
+              icon: "screen" as const,
+            },
           ].map((item) => (
             <a
               key={item.label}

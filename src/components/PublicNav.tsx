@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import CountrySelector from "./CountrySelector";
+import LanguageSelector from "./LanguageSelector";
 import type { CountryCode } from "../lib/countryConfig";
+import {
+  getLocalizedPublicLinks,
+  makeTranslator,
+  type LanguageCode,
+} from "../lib/i18n";
 import { TV_APP_URL } from "../lib/publicLinks";
-import { PUBLIC_SITE_LINKS } from "../lib/siteStructure";
 
 type NavIconName =
   | "home"
@@ -118,6 +123,8 @@ type PublicNavProps = {
   showBottomBar?: boolean;
   /** Show the country selector (desktop header + mobile menu). */
   countryCode?: CountryCode;
+  /** Selected public language for labels and navigation. */
+  languageCode?: LanguageCode;
 };
 
 const PublicNav: React.FC<PublicNavProps> = ({
@@ -125,10 +132,13 @@ const PublicNav: React.FC<PublicNavProps> = ({
   fixedHeader = false,
   showBottomBar = false,
   countryCode,
+  languageCode = "en",
 }) => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const t = makeTranslator(languageCode);
+  const publicLinks = getLocalizedPublicLinks(languageCode);
 
   useEffect(() => {
     if (!fixedHeader) return;
@@ -188,7 +198,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
           </Link>
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#4a5852] md:flex">
-            {PUBLIC_SITE_LINKS.map((link) => (
+            {publicLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
@@ -207,14 +217,19 @@ const PublicNav: React.FC<PublicNavProps> = ({
             {countryCode && (
               <CountrySelector
                 selectedCode={countryCode}
+                label={t("language.country")}
                 className="hidden text-[#4a5852] lg:inline-flex"
               />
             )}
+            <LanguageSelector
+              selectedCode={languageCode}
+              className="hidden text-[#4a5852] lg:inline-flex"
+            />
             <Link
               to="/login"
               className="hidden rounded-lg px-3 py-2 text-sm font-medium text-[#4a5852] hover:bg-white md:inline-flex"
             >
-              Admin
+              {t("nav.admin")}
             </Link>
             <a
               href={TV_APP_URL}
@@ -223,12 +238,12 @@ const PublicNav: React.FC<PublicNavProps> = ({
               className="hidden items-center gap-2 rounded-lg bg-[#0f5c46] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#0a3d30] sm:inline-flex"
             >
               <NavIcon name="screen" className="h-4 w-4" />
-              Display
+              {t("nav.display")}
             </a>
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
-              aria-label="Open menu"
+              aria-label={t("nav.openMenu")}
               aria-expanded={menuOpen}
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#d8cfb8] bg-white text-[#0a3d30] shadow-sm transition hover:border-[#0f5c46]/40 md:hidden"
             >
@@ -243,7 +258,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
         <div className="fixed inset-0 z-[70] md:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
-            aria-label="Close menu"
+            aria-label={t("nav.closeMenu")}
             onClick={() => setMenuOpen(false)}
             className="absolute inset-0 bg-[#0a3d30]/40 backdrop-blur-sm"
           />
@@ -258,7 +273,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
-                aria-label="Close menu"
+                aria-label={t("nav.closeMenu")}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#d8cfb8] bg-white text-[#0a3d30] hover:border-[#0f5c46]/40"
               >
                 <NavIcon name="close" className="h-5 w-5" />
@@ -267,10 +282,10 @@ const PublicNav: React.FC<PublicNavProps> = ({
 
             <nav className="flex-1 px-4 py-5">
               <p className="px-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#9a8c68]">
-                Explore
+                {t("nav.explore")}
               </p>
               <ul className="mt-3 space-y-1.5">
-                {PUBLIC_SITE_LINKS.map((link) => {
+                {publicLinks.map((link) => {
                   const active = isActive(link.path);
                   return (
                     <li key={link.path}>
@@ -314,7 +329,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
               </ul>
 
               <p className="mt-6 px-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#9a8c68]">
-                More
+                {t("nav.more")}
               </p>
               <ul className="mt-3 grid grid-cols-2 gap-2">
                 <li>
@@ -324,7 +339,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
                     className="flex items-center gap-2.5 rounded-xl border border-[#e7e1d3] bg-white px-3.5 py-3 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                   >
                     <NavIcon name="shield" className="h-4 w-4 text-[#0f5c46]" />
-                    Admin
+                    {t("nav.admin")}
                   </Link>
                 </li>
                 <li>
@@ -335,7 +350,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
                     className="flex items-center gap-2.5 rounded-xl border border-[#e7e1d3] bg-white px-3.5 py-3 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                   >
                     <NavIcon name="screen" className="h-4 w-4 text-[#0f5c46]" />
-                    TV Display
+                    {t("nav.tvDisplay")}
                   </a>
                 </li>
                 <li>
@@ -345,7 +360,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
                     className="flex items-center gap-2.5 rounded-xl border border-[#e7e1d3] bg-white px-3.5 py-3 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                   >
                     <NavIcon name="doc" className="h-4 w-4 text-[#0f5c46]" />
-                    Privacy
+                    {t("nav.privacy")}
                   </Link>
                 </li>
                 <li>
@@ -355,7 +370,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
                     className="flex items-center gap-2.5 rounded-xl border border-[#e7e1d3] bg-white px-3.5 py-3 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                   >
                     <NavIcon name="doc" className="h-4 w-4 text-[#0f5c46]" />
-                    Terms
+                    {t("nav.terms")}
                   </Link>
                 </li>
               </ul>
@@ -364,10 +379,18 @@ const PublicNav: React.FC<PublicNavProps> = ({
                 <div className="mt-6 rounded-2xl border border-[#e7e1d3] bg-white p-4">
                   <CountrySelector
                     selectedCode={countryCode}
+                    label={t("language.country")}
                     className="w-full justify-between text-[#4a5852]"
                   />
                 </div>
               )}
+
+              <div className="mt-3 rounded-2xl border border-[#e7e1d3] bg-white p-4">
+                <LanguageSelector
+                  selectedCode={languageCode}
+                  className="w-full justify-between text-[#4a5852]"
+                />
+              </div>
             </nav>
 
             <div className="shrink-0 border-t border-[#e7e1d3] px-4 py-4 text-xs text-[#9a8c68]">
@@ -382,8 +405,8 @@ const PublicNav: React.FC<PublicNavProps> = ({
         <nav className="fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-[#0f5c46]/40 bg-[#0a3d30]/95 px-2 py-2 text-white shadow-2xl shadow-black/30 backdrop-blur md:hidden">
           <div className="grid grid-cols-4 text-center text-[11px] font-medium text-white/70">
             {[
-              { href: "/masjids", label: "Masjids", icon: "home" as const },
-              { href: "/list-your-masjid", label: "List", icon: "pin" as const },
+              { href: "/masjids", label: t("nav.masjids"), icon: "home" as const },
+              { href: "/list-your-masjid", label: t("nav.list"), icon: "pin" as const },
               { href: "/tv", label: "TV", icon: "screen" as const },
             ].map((item) => (
               <Link key={item.label} to={item.href} className="group py-1">
@@ -401,7 +424,7 @@ const PublicNav: React.FC<PublicNavProps> = ({
               <span className="mx-auto mb-1 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-white/70 group-hover:border-[#e6cf9a] group-hover:text-[#e6cf9a]">
                 <NavIcon name="menu" className="h-4 w-4" />
               </span>
-              Menu
+              {t("nav.menu")}
             </button>
           </div>
         </nav>

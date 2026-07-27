@@ -4,6 +4,7 @@ import PublicNav from "../components/PublicNav";
 import { supabase } from "../lib/supabaseClient";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
 import { trackSiteEvent } from "../lib/vercelAnalytics";
+import { usePublicLanguage } from "../lib/usePublicLanguage";
 
 type CareerRole = {
   id: string;
@@ -162,6 +163,7 @@ const HIRING_STEPS = [
 ];
 
 const CareersPage: React.FC = () => {
+  const { countryCode, dir, languageCode, t } = usePublicLanguage();
   const [roles, setRoles] = useState<CareerRole[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [rolesLoading, setRolesLoading] = useState(false);
@@ -177,19 +179,18 @@ const CareersPage: React.FC = () => {
 
   useEffect(() => {
     const canonicalUrl = getGlobalCanonicalUrl("/careers");
+    const description = t("links.careers.description");
     setPageSeo({
-      title: "Careers | UmmahWay",
-      description:
-        "Explore open roles at UmmahWay and submit your CV for active opportunities.",
+      title: t("links.careers.name"),
+      description,
       canonicalUrl,
       imageUrl: "https://ummahway.com/icon.png",
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "WebPage",
-        name: "Careers at UmmahWay",
+        name: t("links.careers.name"),
         url: canonicalUrl,
-        description:
-          "Open roles at UmmahWay for candidates who want to help build useful Muslim community technology.",
+        description,
         isPartOf: {
           "@type": "WebSite",
           name: "UmmahWay",
@@ -197,7 +198,7 @@ const CareersPage: React.FC = () => {
         },
       },
     });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -376,8 +377,16 @@ const CareersPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased">
-      <PublicNav tagline="Careers" />
+    <div
+      className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased"
+      dir={dir}
+      lang={languageCode}
+    >
+      <PublicNav
+        tagline={t("links.careers.navLabel")}
+        countryCode={countryCode}
+        languageCode={languageCode}
+      />
 
       <main>
         {/* Hero */}

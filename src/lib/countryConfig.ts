@@ -9,7 +9,10 @@ export type CountryCode =
   | "ca"
   | "nl"
   | "be"
-  | "es";
+  | "es"
+  | "pk"
+  | "sa"
+  | "ae";
 
 export type CountryConfig = {
   code: CountryCode;
@@ -157,6 +160,36 @@ export const COUNTRIES: CountryConfig[] = [
     defaultTimeZone: "Europe/Madrid",
     ccTlds: ["es"],
     timezoneHints: ["Europe/Madrid"],
+  },
+  {
+    code: "pk",
+    name: "Pakistan",
+    localName: "Pakistan",
+    language: "ur-PK",
+    countryIso: "PK",
+    defaultTimeZone: "Asia/Karachi",
+    ccTlds: ["pk"],
+    timezoneHints: ["Asia/Karachi"],
+  },
+  {
+    code: "sa",
+    name: "Saudi Arabia",
+    localName: "Saudi Arabia",
+    language: "ar-SA",
+    countryIso: "SA",
+    defaultTimeZone: "Asia/Riyadh",
+    ccTlds: ["sa"],
+    timezoneHints: ["Asia/Riyadh"],
+  },
+  {
+    code: "ae",
+    name: "United Arab Emirates",
+    localName: "United Arab Emirates",
+    language: "ar-AE",
+    countryIso: "AE",
+    defaultTimeZone: "Asia/Dubai",
+    ccTlds: ["ae"],
+    timezoneHints: ["Asia/Dubai"],
   },
 ];
 

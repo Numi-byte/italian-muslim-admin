@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router";
+import PublicNav from "../components/PublicNav";
 import { trackSiteEvent } from "../lib/vercelAnalytics";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
+import { usePublicLanguage } from "../lib/usePublicLanguage";
 
 type FormState = {
   business_name: string;
@@ -55,6 +56,7 @@ const labelClass =
   "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#9a8c68]";
 
 const BusinessSponsorshipPage: React.FC = () => {
+  const { countryCode, dir, languageCode, t } = usePublicLanguage();
   const [form, setForm] = useState<FormState>(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -64,19 +66,18 @@ const BusinessSponsorshipPage: React.FC = () => {
 
   useEffect(() => {
     const canonicalUrl = getGlobalCanonicalUrl("/sponsor");
+    const description = t("links.sponsor.description");
     setPageSeo({
-      title: "Sponsor Community Offers | UmmahWay",
-      description:
-        "Apply to share reviewed sponsor offers with Muslim communities through UmmahWay.",
+      title: t("links.sponsor.name"),
+      description,
       canonicalUrl,
       imageUrl: "https://ummahway.com/icon.png",
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "WebPage",
-        name: "Sponsor Community Offers",
+        name: t("links.sponsor.name"),
         url: canonicalUrl,
-        description:
-          "Apply to share reviewed sponsor offers with Muslim communities through UmmahWay.",
+        description,
         isPartOf: {
           "@type": "WebSite",
           name: "UmmahWay",
@@ -84,7 +85,7 @@ const BusinessSponsorshipPage: React.FC = () => {
         },
       },
     });
-  }, []);
+  }, [t]);
 
   const setField = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -155,28 +156,16 @@ const BusinessSponsorshipPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26]">
-      <header className="border-b border-[#e7e1d3] bg-[#f7f4ec]/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/icon.png" alt="" className="h-10 w-10 rounded-lg" />
-            <div>
-              <div className="font-display text-lg font-semibold text-[#0a3d30]">
-                UmmahWay
-              </div>
-              <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#9a8c68]">
-                Sponsorship
-              </div>
-            </div>
-          </Link>
-          <Link
-            to="/"
-            className="rounded-lg border border-[#d8cfb8] bg-white px-3.5 py-2 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
-          >
-            Back home
-          </Link>
-        </div>
-      </header>
+    <div
+      className="min-h-screen bg-[#f7f4ec] text-[#1c2b26]"
+      dir={dir}
+      lang={languageCode}
+    >
+      <PublicNav
+        tagline={t("links.sponsor.navLabel")}
+        countryCode={countryCode}
+        languageCode={languageCode}
+      />
 
       <main className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="space-y-5">

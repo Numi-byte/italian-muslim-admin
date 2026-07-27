@@ -1,7 +1,9 @@
 // src/pages/TermsPage.tsx
 import React, { useEffect } from "react";
 import { Link } from "react-router";
+import PublicNav from "../components/PublicNav";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
+import { usePublicLanguage } from "../lib/usePublicLanguage";
 
 const LEGAL_EMAIL = "info@ummahway.com";
 const SUPPORT_EMAIL = "support@ummahway.com";
@@ -21,10 +23,12 @@ const Section: React.FC<SectionProps> = ({ title, children }) => (
 );
 
 const TermsPage: React.FC = () => {
+  const { countryCode, dir, languageCode, t } = usePublicLanguage();
+
   useEffect(() => {
     const canonicalUrl = getGlobalCanonicalUrl("/terms");
     setPageSeo({
-      title: "Terms & Conditions | UmmahWay",
+      title: `${t("publicPages.common.termsConditions")} | UmmahWay`,
       description:
         "Read the terms that govern use of the UmmahWay app, public masjid websites, TV display, admin tools, support, sponsorship, careers, and purchase features.",
       canonicalUrl,
@@ -32,7 +36,7 @@ const TermsPage: React.FC = () => {
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "WebPage",
-        name: "Terms & Conditions",
+        name: t("publicPages.common.termsConditions"),
         url: canonicalUrl,
         description:
           "Terms that govern use of the UmmahWay app, public masjid websites, TV display, admin tools, support, sponsorship, careers, and purchase features.",
@@ -43,40 +47,30 @@ const TermsPage: React.FC = () => {
         },
       },
     });
-  }, []);
+  }, [t]);
 
   return (
-    <div className="min-h-screen bg-[#f6f7f4] text-[#14201f]">
-      <header className="sticky top-0 z-40 border-b border-[#dfe5df] bg-[#f6f7f4]/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/icon.png" alt="" className="h-10 w-10 rounded-lg" />
-            <div className="leading-tight">
-              <span className="block text-sm font-black text-[#14201f]">
-                UmmahWay
-              </span>
-              <span className="hidden text-xs font-semibold text-[#697875] sm:block">
-                Official Masjid Websites
-              </span>
-            </div>
-          </Link>
-          <Link
-            to="/"
-            className="rounded-md border border-[#cfd8d2] bg-white px-3 py-2 text-sm font-black text-[#14201f] hover:border-[#0b6b62]/40"
-          >
-            Home
-          </Link>
-        </div>
-      </header>
+    <div
+      className="min-h-screen bg-[#f6f7f4] text-[#14201f]"
+      dir={dir}
+      lang={languageCode}
+    >
+      <PublicNav
+        tagline={t("publicPages.common.legal")}
+        countryCode={countryCode}
+        languageCode={languageCode}
+      />
 
       <main>
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-          <p className="text-sm font-black text-[#0b6b62]">Legal</p>
+          <p className="text-sm font-black text-[#0b6b62]">
+            {t("publicPages.common.legal")}
+          </p>
           <h1 className="mt-3 text-4xl font-black leading-tight sm:text-5xl">
-            Terms &amp; Conditions
+            {t("publicPages.common.termsConditions")}
           </h1>
           <p className="mt-3 text-sm font-semibold text-[#697875]">
-            Last updated: 27 July 2026
+            {t("publicPages.common.lastUpdated")}
           </p>
 
           <div className="mt-6 rounded-lg border border-[#cfd8d2] bg-[#edf3ef] p-5 text-base leading-7 text-[#425351]">
@@ -489,10 +483,10 @@ const TermsPage: React.FC = () => {
           <span>&copy; {new Date().getFullYear()} UmmahWay</span>
           <div className="flex flex-wrap gap-4">
             <Link to="/privacy" className="hover:text-[#0b6b62]">
-              Privacy Policy
+              {t("publicPages.common.privacyPolicy")}
             </Link>
             <Link to="/contact?topic=purchase" className="hover:text-[#0b6b62]">
-              Purchase Support
+              {t("publicPages.common.purchaseSupport")}
             </Link>
           </div>
         </div>

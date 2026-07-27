@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router";
+import { useLocation } from "react-router";
 import { useAuth } from "../auth/authContext";
+import PublicNav from "../components/PublicNav";
+import { makeTranslator, type LanguageCode } from "../lib/i18n";
 import { trackSiteEvent } from "../lib/vercelAnalytics";
 import { supabase } from "../lib/supabaseClient";
 import { getGlobalCanonicalUrl, setPageSeo } from "../lib/seo";
+import { usePublicLanguage } from "../lib/usePublicLanguage";
 
 const SUPPORT_EMAIL = "support@ummahway.com";
 
@@ -30,6 +33,7 @@ type FormState = {
 type ContactSupportPanelProps = {
   embedded?: boolean;
   defaultTopic?: ContactTopic;
+  languageCode?: LanguageCode;
 };
 
 const emptyForm = (topic: ContactTopic): FormState => ({
@@ -44,6 +48,7 @@ const emptyForm = (topic: ContactTopic): FormState => ({
 export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
   embedded = false,
   defaultTopic = "purchase",
+  languageCode = "en",
 }) => {
   // The panel is reused inside the light admin console (embedded) and on the
   // public /contact page. Style it to match its surroundings.
@@ -55,6 +60,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
     : "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#9a8c68]";
   const { session, user } = useAuth();
   const location = useLocation();
+  const t = useMemo(() => makeTranslator(languageCode), [languageCode]);
   const queryTopic = useMemo(() => {
     const value = new URLSearchParams(location.search).get("topic");
     return isContactTopic(value) ? value : defaultTopic;
@@ -105,7 +111,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
         source: analyticsSource,
         topic: trimmed.topic,
       });
-      setNotice("Please complete all required fields.");
+      setNotice(t("publicPages.contact.missingRequired"));
       setNoticeType("error");
       return;
     }
@@ -116,7 +122,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
         source: analyticsSource,
         topic: trimmed.topic,
       });
-      setNotice("Please enter a valid email address.");
+      setNotice(t("publicPages.contact.invalidEmail"));
       setNoticeType("error");
       return;
     }
@@ -144,7 +150,9 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
           topic: trimmed.topic,
         });
         const detail = await response?.json().catch(() => null);
-        setNotice(detail?.error || error.message || "Could not send your message.");
+        setNotice(
+          detail?.error || error.message || t("publicPages.contact.submitError")
+        );
         setNoticeType("error");
         return;
       }
@@ -159,7 +167,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
         name: prev.name,
         email: prev.email,
       }));
-      setNotice("Thank you — your message has been sent.");
+      setNotice(t("publicPages.contact.success"));
       setNoticeType("success");
     } finally {
       setSubmitting(false);
@@ -180,7 +188,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
             embedded ? "text-emerald-700" : "text-[#9a8c68]"
           }`}
         >
-          Support
+          {t("publicPages.contact.panelEyebrow")}
         </p>
         <h1
           className={`mt-2 font-semibold ${
@@ -189,14 +197,14 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
               : "font-display text-3xl text-[#1c2b26]"
           }`}
         >
-          Send us a message
+          {t("publicPages.contact.panelTitle")}
         </h1>
         <p
           className={`mt-2 text-sm leading-6 ${
             embedded ? "text-slate-500" : "text-[#6b7a74]"
           }`}
         >
-          We'll reply to the email address you provide below.
+          {t("publicPages.contact.panelText")}
         </p>
       </div>
 
@@ -227,7 +235,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <label className={labelClass}>Name *</label>
+            <label className={labelClass}>{t("publicPages.contact.name")}</label>
             <input
               className={inputClass}
               value={form.name}
@@ -236,7 +244,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
             />
           </div>
           <div>
-            <label className={labelClass}>Email *</label>
+            <label className={labelClass}>{t("publicPages.contact.email")}</label>
             <input
               className={inputClass}
               type="email"
@@ -249,7 +257,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
 
         <div className="grid gap-3 md:grid-cols-[0.8fr_1.2fr]">
           <div>
-            <label className={labelClass}>Topic *</label>
+            <label className={labelClass}>{t("publicPages.contact.topic")}</label>
             <select
               className={inputClass}
               value={form.topic}
@@ -259,13 +267,15 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
             >
               {contactTopics.map((topic) => (
                 <option key={topic.value} value={topic.value}>
-                  {topic.label}
+                  {getContactTopicLabel(topic.value, t)}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className={labelClass}>Subject *</label>
+            <label className={labelClass}>
+              {t("publicPages.contact.subject")}
+            </label>
             <input
               className={inputClass}
               value={form.subject}
@@ -276,7 +286,7 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
         </div>
 
         <div>
-          <label className={labelClass}>Message *</label>
+          <label className={labelClass}>{t("publicPages.contact.message")}</label>
           <textarea
             className={`${inputClass} min-h-40 resize-y`}
             value={form.message}
@@ -301,7 +311,9 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
               : "w-full rounded-xl bg-[#0f5c46] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0a3d30]/15 transition hover:bg-[#0a3d30] disabled:opacity-60"
           }
         >
-          {submitting ? "Sending…" : "Send message"}
+          {submitting
+            ? t("publicPages.contact.sending")
+            : t("publicPages.contact.send")}
         </button>
       </form>
     </section>
@@ -309,21 +321,22 @@ export const ContactSupportPanel: React.FC<ContactSupportPanelProps> = ({
 };
 
 const ContactPage: React.FC = () => {
+  const { countryCode, dir, languageCode, t } = usePublicLanguage();
+
   useEffect(() => {
     const canonicalUrl = getGlobalCanonicalUrl("/contact");
+    const description = t("links.contact.description");
     setPageSeo({
-      title: "Contact UmmahWay | Support For Masjids And Worshippers",
-      description:
-        "Contact UmmahWay for account help, purchase questions, masjid listings, prayer timing updates, privacy requests, and technical support.",
+      title: t("links.contact.name"),
+      description,
       canonicalUrl,
       imageUrl: "https://ummahway.com/icon.png",
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "ContactPage",
-        name: "Contact UmmahWay",
+        name: t("links.contact.name"),
         url: canonicalUrl,
-        description:
-          "Contact UmmahWay for account help, purchase questions, masjid listings, prayer timing updates, privacy requests, and technical support.",
+        description,
         isPartOf: {
           "@type": "WebSite",
           name: "UmmahWay",
@@ -336,31 +349,19 @@ const ContactPage: React.FC = () => {
         },
       },
     });
-  }, []);
+  }, [t]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26]">
-      <header className="border-b border-[#e7e1d3] bg-[#f7f4ec]/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/icon.png" alt="" className="h-10 w-10 rounded-lg" />
-            <div>
-              <div className="font-display text-lg font-semibold text-[#0a3d30]">
-                UmmahWay
-              </div>
-              <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#9a8c68]">
-                Support
-              </div>
-            </div>
-          </Link>
-          <Link
-            to="/"
-            className="rounded-lg border border-[#d8cfb8] bg-white px-3.5 py-2 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
-          >
-            Back home
-          </Link>
-        </div>
-      </header>
+    <div
+      className="min-h-screen bg-[#f7f4ec] text-[#1c2b26]"
+      dir={dir}
+      lang={languageCode}
+    >
+      <PublicNav
+        tagline={t("publicPages.contact.tagline")}
+        countryCode={countryCode}
+        languageCode={languageCode}
+      />
 
       <main className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[0.8fr_1.2fr]">
         <section className="space-y-5">
@@ -368,22 +369,21 @@ const ContactPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <span className="h-px w-8 bg-[#d8cfb8]" />
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                Get in touch
+                {t("publicPages.contact.eyebrow")}
               </p>
             </div>
             <h1 className="mt-2 font-display text-4xl font-semibold leading-tight">
-              We're here to help
+              {t("publicPages.contact.title")}
             </h1>
             <p className="mt-4 text-sm leading-7 text-[#4a5852]">
-              Questions about a purchase, your account, or masjid timings? Send
-              us a note and we'll get back to you.
+              {t("publicPages.contact.text")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-[#e7e1d3] bg-white p-4 text-sm shadow-sm">
             <div className="font-semibold text-[#0a3d30]">{SUPPORT_EMAIL}</div>
             <div className="mt-1 text-[#6b7a74]">
-              Replies go to the email address in your message.
+              {t("publicPages.contact.replyNote")}
             </div>
           </div>
 
@@ -392,13 +392,12 @@ const ContactPage: React.FC = () => {
               وَقُل رَّبِّ زِدْنِي عِلْمًا
             </p>
             <p className="mt-2 text-sm leading-6 text-white/70">
-              For prayer times and notices, visit your masjid's page — each one
-              is kept current by its own team.
+              {t("publicPages.contact.cardText")}
             </p>
           </div>
         </section>
 
-        <ContactSupportPanel />
+        <ContactSupportPanel languageCode={languageCode} />
       </main>
     </div>
   );
@@ -406,6 +405,22 @@ const ContactPage: React.FC = () => {
 
 function isContactTopic(value: string | null): value is ContactTopic {
   return contactTopics.some((topic) => topic.value === value);
+}
+
+function getContactTopicLabel(
+  value: ContactTopic,
+  t: ReturnType<typeof makeTranslator>
+) {
+  const labels: Record<ContactTopic, string> = {
+    purchase: t("publicPages.contact.topicPurchase"),
+    login_access: t("publicPages.contact.topicLogin"),
+    masjid_timings: t("publicPages.contact.topicMasjid"),
+    technical: t("publicPages.contact.topicTechnical"),
+    privacy: t("publicPages.contact.topicPrivacy"),
+    other: t("publicPages.contact.topicOther"),
+  };
+
+  return labels[value];
 }
 
 export default ContactPage;

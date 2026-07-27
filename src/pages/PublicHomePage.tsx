@@ -5,10 +5,17 @@ import PublicNav from "../components/PublicNav";
 import { supabase } from "../lib/supabaseClient";
 import {
   DEFAULT_COUNTRY_CODE,
-  type CountryConfig,
   inferMasjidCountryCode,
 } from "../lib/countryConfig";
 import { useCountryPreference } from "../lib/countryRouting";
+import {
+  getLocalizedCountryName,
+  getLocalizedPublicLinks,
+  isRtlLanguage,
+  makeTranslator,
+  type LanguageCode,
+} from "../lib/i18n";
+import { useLanguagePreference } from "../lib/languageRouting";
 import {
   STORE_LINKS,
   TV_APP_URL,
@@ -16,7 +23,6 @@ import {
   getMasjidTvUrl,
 } from "../lib/publicLinks";
 import { getCanonicalUrl, getCountryAlternates, setPageSeo } from "../lib/seo";
-import { PUBLIC_SITE_LINKS } from "../lib/siteStructure";
 
 type IconName =
   | "arrow"
@@ -147,6 +153,7 @@ const StarLattice: React.FC<{ className?: string; id: string }> = ({
 
 type StoreButtonProps = {
   platform: "ios" | "android";
+  languageCode: LanguageCode;
   className?: string;
 };
 
@@ -173,45 +180,45 @@ type PlottedMasjid = ActiveMasjid & {
   coordinateSource: "database" | "address";
 };
 
-const pageFeatures = [
+const getPageFeatures = (t: ReturnType<typeof makeTranslator>) => [
   {
     icon: "clock" as const,
-    title: "Daily prayer times",
-    text: "Today's begins and jama'ah times for all five prayers, ready to check before you set off.",
+    title: t("features.dailyPrayerTimes.title"),
+    text: t("features.dailyPrayerTimes.text"),
   },
   {
     icon: "calendar" as const,
-    title: "Jumu'ah times",
-    text: "Friday khutbah and jama'ah times, with the language and any overflow slots noted alongside.",
+    title: t("features.jumuahTimes.title"),
+    text: t("features.jumuahTimes.text"),
   },
   {
     icon: "bell" as const,
-    title: "News & notices",
-    text: "Events, Ramadan timings and urgent changes from the masjid, in one place instead of scattered messages.",
+    title: t("features.notices.title"),
+    text: t("features.notices.text"),
   },
   {
     icon: "screen" as const,
-    title: "Hall display",
-    text: "A screen-friendly timetable for entrances and prayer halls, opened straight from the same page.",
+    title: t("features.hallDisplay.title"),
+    text: t("features.hallDisplay.text"),
   },
 ];
 
-const adminFeatures = [
-  "Masjid profile and visibility",
-  "Daily begins and jama'ah times",
-  "Jumu'ah slots and khutbah notes",
-  "News and notices",
-  "Ramadan and iftar timings",
-  "Editor access for volunteers",
+const getAdminFeatures = (t: ReturnType<typeof makeTranslator>) => [
+  t("adminFeatures.profile"),
+  t("adminFeatures.daily"),
+  t("adminFeatures.jumuah"),
+  t("adminFeatures.notices"),
+  t("adminFeatures.ramadan"),
+  t("adminFeatures.editor"),
 ];
 
 const samplePrayerTimes = [
-  ["Fajr", "04:50"],
-  ["Dhuhr", "13:30"],
-  ["Asr", "18:30"],
-  ["Maghrib", "21:10"],
-  ["Isha", "23:00"],
-];
+  ["fajr", "04:50"],
+  ["dhuhr", "13:30"],
+  ["asr", "18:30"],
+  ["maghrib", "21:10"],
+  ["isha", "23:00"],
+] as const;
 
 const coordinateFallbacks: Record<string, { latitude: number; longitude: number }> = {
   "Masjid Via Macello": { latitude: 46.4945383, longitude: 11.3665287 },
@@ -367,11 +374,13 @@ function getInitials(value: string) {
 
 const StoreButton: React.FC<StoreButtonProps> = ({
   platform,
+  languageCode,
   className = "",
 }) => {
+  const t = makeTranslator(languageCode);
   const isIos = platform === "ios";
-  const label = isIos ? "Download on the" : "Get it on";
-  const store = isIos ? "App Store" : "Google Play";
+  const label = isIos ? t("store.iosLabel") : t("store.androidLabel");
+  const store = isIos ? t("store.appStore") : t("store.googlePlay");
   const href = isIos ? STORE_LINKS.ios : STORE_LINKS.android;
 
   return (
@@ -426,7 +435,14 @@ const StoreButton: React.FC<StoreButtonProps> = ({
   );
 };
 
-const MasjidPagePreview: React.FC = () => {
+const MasjidPagePreview: React.FC<{
+  t: ReturnType<typeof makeTranslator>;
+}> = ({ t }) => {
+  const prayerNames = samplePrayerTimes.map(([key, time]) => [
+    t(`prayers.${key}`),
+    time,
+  ]);
+
   return (
     <div className="rounded-2xl border border-[#e7e1d3] bg-white p-3 shadow-2xl shadow-[#0a3d30]/10">
       <div className="overflow-hidden rounded-xl border border-[#e7e1d3]">
@@ -450,7 +466,7 @@ const MasjidPagePreview: React.FC = () => {
 
         <div className="bg-[#faf8f1] p-4">
           <div className="grid grid-cols-3 gap-2">
-            {samplePrayerTimes.slice(0, 3).map(([name, time]) => (
+            {prayerNames.slice(0, 3).map(([name, time]) => (
               <div
                 key={name}
                 className="rounded-lg border border-[#e7e1d3] bg-white p-2.5 text-center"
@@ -471,15 +487,15 @@ const MasjidPagePreview: React.FC = () => {
                 13:30
               </p>
               <p className="mt-0.5 text-[11px] text-[#6b7a74]">
-                Khutbah in Italian &amp; Arabic
+                {t("home.previewJumuahNote")}
               </p>
             </div>
             <div className="rounded-lg border border-[#e7e1d3] bg-white p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9a8c68]">
-                Notice
+                {t("home.previewNotice")}
               </p>
               <p className="mt-1 text-[13px] leading-6 text-[#4a5852]">
-                Iftar sign-up opens after Maghrib.
+                {t("home.previewNoticeText")}
               </p>
             </div>
           </div>
@@ -494,7 +510,8 @@ type MasjidsDirectoryProps = {
   plottedMasjids: PlottedMasjid[];
   loading: boolean;
   error: string | null;
-  selectedCountry: CountryConfig;
+  selectedCountryName: string;
+  t: ReturnType<typeof makeTranslator>;
 };
 
 const PUBLIC_MASJID_COLUMNS =
@@ -506,7 +523,8 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
   loading,
   masjids,
   plottedMasjids,
-  selectedCountry,
+  selectedCountryName,
+  t,
 }) => {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -570,7 +588,9 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
                 <span style="display:block; font-size:12px; line-height:1.45; color:#6b7a74;">${escapeHtml(
                   address
                 )}</span>
-                <a href="${pageHref}" style="display:inline-block; margin-top:10px; padding:7px 10px; border-radius:8px; background:#0f5c46; color:#fff; font-size:12px; font-weight:700; text-decoration:none;">Open page</a>
+                <a href="${pageHref}" style="display:inline-block; margin-top:10px; padding:7px 10px; border-radius:8px; background:#0f5c46; color:#fff; font-size:12px; font-weight:700; text-decoration:none;">${escapeHtml(
+                  t("home.openPage")
+                )}</a>
               </div>
             `);
         });
@@ -581,7 +601,7 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
           setMapError(
             caughtError instanceof Error
               ? caughtError.message
-              : "The map failed to load."
+              : t("home.noMappedLocations")
           );
         }
       }
@@ -593,7 +613,7 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
       cancelled = true;
       activeMap?.remove();
     };
-  }, [plottedMasjids]);
+  }, [plottedMasjids, t]);
 
   return (
     <section id="directory" className="bg-white py-16 lg:py-20">
@@ -603,16 +623,16 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
             <div className="flex items-center gap-3">
               <span className="h-px w-8 bg-[#d8cfb8]" />
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                Directory
+                {t("home.directory")}
               </p>
             </div>
             <h2 className="mt-2 max-w-3xl font-display text-4xl font-semibold leading-tight">
-              Find your local masjid in {selectedCountry.name}
+              {t("home.directoryTitle", { country: selectedCountryName })}
             </h2>
           </div>
           <div className="rounded-2xl border border-[#e7e1d3] bg-[#faf8f1] px-5 py-3 text-center">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9a8c68]">
-              Masjids listed
+              {t("home.masjidsListed")}
             </p>
             <p className="mt-1 font-display text-3xl font-semibold text-[#0f5c46]">
               {loading ? "…" : masjids.length}
@@ -624,20 +644,19 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
           <div className="grid gap-3">
             {loading && (
               <p className="rounded-2xl border border-[#e7e1d3] bg-[#faf8f1] p-4 text-sm text-[#6b7a74]">
-                Loading masjids…
+                {t("home.loadingMasjids")}
               </p>
             )}
 
             {error && (
               <p className="rounded-2xl border border-[#f3d9b4] bg-[#fff8ea] p-4 text-sm text-[#7a5a2a]">
-                Could not load masjids: {error}
+                {t("home.loadMasjidsError", { error })}
               </p>
             )}
 
             {!loading && !error && masjids.length === 0 && (
               <p className="rounded-2xl border border-[#e7e1d3] bg-[#faf8f1] p-4 text-sm text-[#6b7a74]">
-                No masjids are listed for {selectedCountry.name} yet. Choose
-                another country or ask your masjid to join UmmahWay.
+                {t("home.noMasjids", { country: selectedCountryName })}
               </p>
             )}
 
@@ -678,7 +697,7 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
                         to={pagePath}
                         className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f5c46] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#0a3d30]"
                       >
-                        Open page
+                        {t("home.openPage")}
                         <Icon name="arrow" className="h-4 w-4" />
                       </Link>
                       <a
@@ -688,7 +707,7 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
                         className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#d8cfb8] bg-white px-3.5 py-2 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                       >
                         <Icon name="pin" className="h-4 w-4" />
-                        Directions
+                        {t("home.directions")}
                       </a>
                       <a
                         href={getMasjidTvUrl()}
@@ -697,7 +716,7 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
                         className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#d8cfb8] bg-white px-3.5 py-2 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                       >
                         <Icon name="screen" className="h-4 w-4" />
-                        Display
+                        {t("home.display")}
                       </a>
                     </div>
                   </article>
@@ -716,12 +735,12 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
                 <div className="absolute inset-0 flex items-center justify-center bg-[#eef2ea] px-6 text-center">
                   <div className="max-w-sm">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                      Map
+                      {t("home.map")}
                     </p>
                     <p className="mt-2 font-display text-xl font-semibold text-[#1c2b26]">
                       {loading
-                        ? "Loading masjids…"
-                        : mapError || "No mapped locations yet."}
+                        ? t("home.loadingMasjids")
+                        : mapError || t("home.noMappedLocations")}
                     </p>
                   </div>
                 </div>
@@ -731,15 +750,15 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9a8c68]">
-                      {selectedCountry.name}
+                      {selectedCountryName}
                     </p>
                     <p className="mt-1 font-display text-lg font-semibold text-[#1c2b26]">
                       {selectedMasjid
-                        ? `${getMasjidName(selectedMasjid)} and ${Math.max(
-                            0,
-                            plottedMasjids.length - 1
-                          )} more on the map`
-                        : "Masjid locations"}
+                        ? t("home.mapMore", {
+                            name: getMasjidName(selectedMasjid),
+                            count: Math.max(0, plottedMasjids.length - 1),
+                          })
+                        : t("home.masjidLocations")}
                     </p>
                   </div>
                   <p className="font-mono text-[11px] text-[#9a8c68]">
@@ -758,6 +777,19 @@ const MasjidsDirectory: React.FC<MasjidsDirectoryProps> = ({
 const PublicHomePage: React.FC = () => {
   const countryPreference = useCountryPreference();
   const selectedCountry = countryPreference.country;
+  const languageCode = useLanguagePreference(selectedCountry.code);
+  const languageMeta = useMemo(() => ({ dir: isRtlLanguage(languageCode) ? "rtl" : "ltr" }), [languageCode]);
+  const t = useMemo(() => makeTranslator(languageCode), [languageCode]);
+  const selectedCountryName = useMemo(
+    () => getLocalizedCountryName(selectedCountry, languageCode),
+    [languageCode, selectedCountry]
+  );
+  const publicLinks = useMemo(
+    () => getLocalizedPublicLinks(languageCode),
+    [languageCode]
+  );
+  const pageFeatures = useMemo(() => getPageFeatures(t), [t]);
+  const adminFeatures = useMemo(() => getAdminFeatures(t), [t]);
   const [masjids, setMasjids] = useState<ActiveMasjid[]>([]);
   const [loadingMasjids, setLoadingMasjids] = useState(true);
   const [masjidsError, setMasjidsError] = useState<string | null>(null);
@@ -851,8 +883,10 @@ const PublicHomePage: React.FC = () => {
 
   useEffect(() => {
     const path = window.location.pathname === "/" ? "/" : "/masjids";
-    const title = `Masjid Prayer Times in ${selectedCountry.name} | UmmahWay`;
-    const description = `Find masjids in ${selectedCountry.name}, daily prayer times, Jumu'ah schedules, announcements, directions, and UmmahWay TV display links.`;
+    const title = t("home.seoTitle", { country: selectedCountryName });
+    const description = t("home.seoDescription", {
+      country: selectedCountryName,
+    });
     const canonicalUrl = getCanonicalUrl(selectedCountry.code, path);
 
     setPageSeo({
@@ -875,10 +909,10 @@ const PublicHomePage: React.FC = () => {
           name: "UmmahWay",
           url: canonicalUrl,
           description,
-          inLanguage: selectedCountry.language,
+          inLanguage: languageCode,
           areaServed: selectedCountry.countryIso,
         },
-        ...PUBLIC_SITE_LINKS.map((link) => ({
+        ...publicLinks.map((link) => ({
           "@context": "https://schema.org",
           "@type": "SiteNavigationElement",
           name: link.name,
@@ -888,7 +922,9 @@ const PublicHomePage: React.FC = () => {
         {
           "@context": "https://schema.org",
           "@type": "ItemList",
-          name: `Masjids in ${selectedCountry.name}`,
+          name: t("masjid.breadcrumbMasjids", {
+            country: selectedCountryName,
+          }),
           itemListElement: countryMasjids.slice(0, 50).map((masjid, index) => ({
             "@type": "ListItem",
             position: index + 1,
@@ -898,15 +934,27 @@ const PublicHomePage: React.FC = () => {
         },
       ],
     });
-  }, [countryMasjids, selectedCountry]);
+  }, [
+    countryMasjids,
+    languageCode,
+    publicLinks,
+    selectedCountry,
+    selectedCountryName,
+    t,
+  ]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased">
+    <div
+      className="min-h-screen bg-[#f7f4ec] text-[#1c2b26] antialiased"
+      dir={languageMeta.dir}
+      lang={languageCode}
+    >
       <PublicNav
         fixedHeader
         showBottomBar
-        tagline={`${selectedCountry.name} masjid prayer times`}
+        tagline={t("home.navTagline", { country: selectedCountryName })}
         countryCode={selectedCountry.code}
+        languageCode={languageCode}
       />
 
       <main>
@@ -922,12 +970,10 @@ const PublicHomePage: React.FC = () => {
               </p>
 
               <h1 className="mt-5 max-w-4xl font-display text-5xl font-semibold leading-[1.05] text-[#0a3d30] sm:text-6xl lg:text-7xl">
-                Prayer times from masjids in {selectedCountry.name}.
+                {t("home.heroTitle", { country: selectedCountryName })}
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-[#4a5852]">
-                Every masjid listed for {selectedCountry.name} shows today's prayer times,
-                Jumu'ah, news and directions — kept up to date by the people who
-                from the people who run it.
+                {t("home.heroText", { country: selectedCountryName })}
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -935,7 +981,7 @@ const PublicHomePage: React.FC = () => {
                   href="#directory"
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f5c46] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0f5c46]/20 hover:bg-[#0a3d30]"
                 >
-                  Find a masjid
+                  {t("home.findMasjid")}
                   <Icon name="arrow" className="h-4 w-4" />
                 </a>
                 <a
@@ -945,13 +991,13 @@ const PublicHomePage: React.FC = () => {
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#d8cfb8] bg-white px-5 py-3 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                 >
                   <Icon name="screen" className="h-4 w-4" />
-                  Open display
+                  {t("home.openDisplay")}
                 </a>
                 <Link
                   to="/contact?topic=masjid_timings"
                   className="inline-flex items-center justify-center rounded-lg border border-[#d8cfb8] bg-white px-5 py-3 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                 >
-                  List a masjid
+                  {t("home.listMasjid")}
                 </Link>
               </div>
 
@@ -960,16 +1006,15 @@ const PublicHomePage: React.FC = () => {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold text-[#1c2b26]">
-                        Choose your country
+                        {t("home.chooseCountry")}
                       </p>
                       <p className="mt-1 text-sm text-[#6b7a74]">
-                        This domain is not tied to one country yet, so select
-                        the country you want to browse.
+                        {t("home.chooseCountryText")}
                       </p>
                     </div>
                     <CountrySelector
                       selectedCode={selectedCountry.code}
-                      label="Show"
+                      label={t("home.show")}
                       className="text-[#4a5852]"
                     />
                   </div>
@@ -980,13 +1025,13 @@ const PublicHomePage: React.FC = () => {
                 {[
                   [
                     loadingMasjids ? "..." : `${countryMasjids.length}`,
-                    "masjids listed",
+                    t("home.masjidsListedLower"),
                   ],
                   [
                     loadingMasjids ? "..." : `${plottedMasjids.length}`,
-                    "on the map",
+                    t("home.onMap"),
                   ],
-                  ["5", "daily prayers"],
+                  ["5", t("home.dailyPrayers")],
                 ].map(([value, label]) => (
                   <div
                     key={label}
@@ -1002,7 +1047,7 @@ const PublicHomePage: React.FC = () => {
             </div>
 
             <div className="w-full">
-              <MasjidPagePreview />
+              <MasjidPagePreview t={t} />
 
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {(featuredMasjids.length ? featuredMasjids : []).map((masjid) => (
@@ -1029,7 +1074,8 @@ const PublicHomePage: React.FC = () => {
           loading={loadingMasjids}
           masjids={countryMasjids}
           plottedMasjids={plottedMasjids}
-          selectedCountry={selectedCountry}
+          selectedCountryName={selectedCountryName}
+          t={t}
         />
 
         <section id="pages" className="bg-[#f7f4ec] py-16 lg:py-20">
@@ -1039,17 +1085,15 @@ const PublicHomePage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <span className="h-px w-8 bg-[#d8cfb8]" />
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                    Every page
+                    {t("home.everyPage")}
                   </p>
                 </div>
                 <h2 className="mt-2 font-display text-4xl font-semibold leading-tight">
-                  What's on a masjid page
+                  {t("home.pageSectionTitle")}
                 </h2>
               </div>
               <p className="max-w-2xl text-lg leading-8 text-[#4a5852]">
-                Each page is built around what people look for before heading to
-                the masjid: the times, Friday details, notices and how to get
-                there.
+                {t("home.pageSectionText")}
               </p>
             </div>
 
@@ -1080,15 +1124,14 @@ const PublicHomePage: React.FC = () => {
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-[#d8cfb8]" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8c68]">
-                  For masjid teams
+                  {t("home.forTeams")}
                 </p>
               </div>
               <h2 className="mt-2 font-display text-4xl font-semibold leading-tight">
-                One place to keep everything current
+                {t("home.teamsTitle")}
               </h2>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-[#4a5852]">
-                Update the times once and they show on the page, the app and the
-                hall display together — no juggling separate tools.
+                {t("home.teamsText")}
               </p>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -1109,13 +1152,13 @@ const PublicHomePage: React.FC = () => {
                   to="/login"
                   className="inline-flex items-center justify-center rounded-lg bg-[#0a3d30] px-5 py-3 text-sm font-semibold text-white hover:bg-[#0c4a3a]"
                 >
-                  Admin sign in
+                  {t("home.adminSignIn")}
                 </Link>
                 <Link
                   to="/contact?topic=masjid_timings"
                   className="inline-flex items-center justify-center rounded-lg border border-[#d8cfb8] bg-white px-5 py-3 text-sm font-semibold text-[#1c2b26] hover:border-[#0f5c46]/40"
                 >
-                  Get set up
+                  {t("home.getSetUp")}
                 </Link>
               </div>
             </div>
@@ -1125,22 +1168,22 @@ const PublicHomePage: React.FC = () => {
                 <div className="flex items-center justify-between border-b border-[#e7e1d3] px-5 py-4">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9a8c68]">
-                      Admin console
+                      {t("home.adminConsole")}
                     </p>
                     <h3 className="font-display text-xl font-semibold text-[#1c2b26]">
-                      Timetable editor
+                      {t("home.timetableEditor")}
                     </h3>
                   </div>
                   <span className="rounded-full bg-[#f2efe4] px-3 py-1 text-[11px] font-semibold text-[#0f5c46]">
-                    Live
+                    {t("home.live")}
                   </span>
                 </div>
 
                 <div className="grid gap-3 p-5 sm:grid-cols-3">
                   {[
-                    ["Page", "public site"],
-                    ["Display", "hall screen"],
-                    ["App", "mobile sync"],
+                    [t("home.pageLabel"), t("home.publicSite")],
+                    [t("home.display"), t("home.hallScreen")],
+                    [t("home.appLabel"), t("home.mobileSync")],
                   ].map(([value, label]) => (
                     <div key={label} className="rounded-xl bg-[#f2efe4] p-4">
                       <p className="font-display text-lg font-semibold text-[#0f5c46]">
@@ -1157,10 +1200,10 @@ const PublicHomePage: React.FC = () => {
                   <div className="rounded-xl border border-[#e7e1d3] bg-white p-4">
                     <div className="mb-4 flex items-center justify-between">
                       <h4 className="font-display text-base font-semibold text-[#1c2b26]">
-                        Today's times
+                        {t("home.todaysTimes")}
                       </h4>
                       <span className="text-xs font-semibold text-[#0f5c46]">
-                        Saved
+                        {t("home.saved")}
                       </span>
                     </div>
                     <div className="space-y-2">
@@ -1170,13 +1213,13 @@ const PublicHomePage: React.FC = () => {
                           className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-lg bg-[#faf8f1] px-3 py-2 text-sm"
                         >
                           <span className="font-medium text-[#30403e]">
-                            {name}
+                            {t(`prayers.${name}`)}
                           </span>
                           <span className="font-display text-base font-semibold text-[#1c2b26]">
                             {time}
                           </span>
                           <span className="rounded-md bg-white px-2 py-1 text-[11px] font-medium text-[#9a8c68]">
-                            jama'ah
+                            {t("home.jamaah")}
                           </span>
                         </div>
                       ))}
@@ -1199,16 +1242,23 @@ const PublicHomePage: React.FC = () => {
                 حَيَّ عَلَى الصَّلَاة
               </p>
               <h2 className="mt-3 font-display text-4xl font-semibold leading-tight">
-                Prayer times in your pocket
+                {t("home.appTitle")}
               </h2>
               <p className="mt-4 text-lg leading-8 text-white/75">
-                Get the UmmahWay app for prayer times, Jumu'ah and notices from
-                the masjids near you.
+                {t("home.appText")}
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <StoreButton platform="ios" className="shadow-none" />
-              <StoreButton platform="android" className="shadow-none" />
+              <StoreButton
+                platform="ios"
+                languageCode={languageCode}
+                className="shadow-none"
+              />
+              <StoreButton
+                platform="android"
+                languageCode={languageCode}
+                className="shadow-none"
+              />
             </div>
           </div>
         </section>
@@ -1223,27 +1273,27 @@ const PublicHomePage: React.FC = () => {
                 UmmahWay
               </p>
               <p className="text-sm text-[#6b7a74]">
-                Prayer times for local masjids.
+                {t("home.footerText")}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-4 text-sm font-medium text-[#4a5852]">
-            {PUBLIC_SITE_LINKS.map((link) => (
+            {publicLinks.map((link) => (
               <Link key={link.path} to={link.path} className="hover:text-[#0f5c46]">
                 {link.navLabel}
               </Link>
             ))}
             <Link to="/privacy" className="hover:text-[#0f5c46]">
-              Privacy
+              {t("nav.privacy")}
             </Link>
             <Link to="/terms" className="hover:text-[#0f5c46]">
-              Terms
+              {t("nav.terms")}
             </Link>
             <Link to="/contact" className="hover:text-[#0f5c46]">
-              Contact
+              {t("nav.contact")}
             </Link>
             <Link to="/login" className="hover:text-[#0f5c46]">
-              Admin
+              {t("nav.admin")}
             </Link>
             <span className="text-[#9a8c68]">&copy; {currentYear} UmmahWay</span>
           </div>
