@@ -12,6 +12,8 @@ const PRAYER_TIMING_EDITOR_ACCESS: Record<string, string> = {
     "4be0c02c-0b29-4c28-8547-f449b49bd619",
   "f9bdb476-5715-471f-b276-102bcf8af214":
     "65667aba-156a-4815-9107-b76aec55e7a3",
+  "c6956152-baf0-4d67-8951-551820b81015":
+    "dd7198bd-0663-4d04-9f01-8d0d47de3e23",
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
